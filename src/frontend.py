@@ -432,7 +432,25 @@ if response_data:
                     clinical_recs = recommendations.get("clinical_recommendations", [])
                     if clinical_recs:
                         for idx, r in enumerate(clinical_recs):
-                            st.checkbox(r, key=f"clin_rec_{idx}")
+                            if isinstance(r, dict):
+                                text = r.get("text", "")
+                                completed = r.get("completed", False)
+                            else:
+                                text = r
+                                completed = False
+                                
+                            key = f"clin_{selected_patient_id}_{idx}"
+                            checked = st.checkbox(text, value=completed, key=key)
+                            
+                            if checked != completed:
+                                try:
+                                    requests.post(
+                                        f"{BACKEND_URL}/patients/{selected_patient_id}/checklist",
+                                        json={"category": "clinical", "index": idx, "completed": checked}
+                                    )
+                                    st.rerun()
+                                except Exception:
+                                    pass
                     else:
                         st.markdown("<p style='font-size:0.9rem; opacity:0.7;'>No clinical interventions generated.</p>", unsafe_allow_html=True)
                     st.markdown("</div>", unsafe_allow_html=True)
@@ -443,7 +461,25 @@ if response_data:
                     sdoh_recs = recommendations.get("sdoh_interventions", [])
                     if sdoh_recs:
                         for idx, r in enumerate(sdoh_recs):
-                            st.checkbox(r, key=f"sdoh_rec_{idx}")
+                            if isinstance(r, dict):
+                                text = r.get("text", "")
+                                completed = r.get("completed", False)
+                            else:
+                                text = r
+                                completed = False
+                                
+                            key = f"sdoh_{selected_patient_id}_{idx}"
+                            checked = st.checkbox(text, value=completed, key=key)
+                            
+                            if checked != completed:
+                                try:
+                                    requests.post(
+                                        f"{BACKEND_URL}/patients/{selected_patient_id}/checklist",
+                                        json={"category": "sdoh", "index": idx, "completed": checked}
+                                    )
+                                    st.rerun()
+                                except Exception:
+                                    pass
                     else:
                         st.markdown("<p style='font-size:0.9rem; opacity:0.7;'>No SDOH support services required.</p>", unsafe_allow_html=True)
                     st.markdown("</div>", unsafe_allow_html=True)

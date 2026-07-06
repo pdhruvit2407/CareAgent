@@ -390,6 +390,26 @@ class PatientMemory:
         self.memory[patient_id].append(run_record)
         self.save_memory()
 
+    def update_checklist(self, patient_id, category, index, completed):
+        if patient_id in self.memory and self.memory[patient_id]:
+            # Get latest run
+            latest_run = self.memory[patient_id][-1]
+            if category == "clinical":
+                key = "clinical_recommendations"
+            else:
+                key = "sdoh_interventions"
+                
+            recs = latest_run.get("recommendations", {}).get(key, [])
+            if 0 <= index < len(recs):
+                if isinstance(recs[index], dict):
+                    recs[index]["completed"] = completed
+                else:
+                    # If it's a string, convert to dict
+                    recs[index] = {"text": recs[index], "completed": completed}
+                self.save_memory()
+                return True
+        return False
+
 
 class CareAgentOrchestrator:
     def __init__(self, data_dir="data", model_path="src/model_artifacts.pkl", memory_path="data/careagent_memory.pkl", log_path="data/careagent_decisions_log.csv"):
@@ -434,17 +454,31 @@ class CareAgentOrchestrator:
         # 5. Generate recommendations
         recs = self.recommendation_tool.generate_recommendations(profile, risk_results, memory_context)
         
+        # Format recommendations to include checklist completion state
+        formatted_recs = {
+            "risk_drivers": recs.get("risk_drivers", []),
+            "clinical_recommendations": [{"text": r, "completed": False} if isinstance(r, str) else r for r in recs.get("clinical_recommendations", [])],
+            "sdoh_interventions": [{"text": r, "completed": False} if isinstance(r, str) else r for r in recs.get("sdoh_interventions", [])],
+            "clinical_rationale": recs.get("clinical_rationale", "")
+        }
+        
         # 6. Save to memory
         run_record = {
             "encounter_id": encounter_id,
             "timestamp": datetime.now().isoformat(),
             "risk_results": risk_results,
-            "recommendations": recs
+            "recommendations": formatted_recs
         }
         self.memory.update_history(patient_id, run_record)
         
-        # 7. Log decision
-        self.logging_tool.log_decision(patient_id, encounter_id, risk_results, recs)
+        # 7. Log decision (serialize to logs using formatted strings)
+        log_recs = {
+            "risk_drivers": formatted_recs["risk_drivers"],
+            "clinical_recommendations": [r["text"] for r in formatted_recs["clinical_recommendations"]],
+            "sdoh_interventions": [r["text"] for r in formatted_recs["sdoh_interventions"]],
+            "clinical_rationale": formatted_recs["clinical_rationale"]
+        }
+        self.logging_tool.log_decision(patient_id, encounter_id, risk_results, log_recs)
         
         return {
             "patient_id": patient_id,
@@ -458,7 +492,7 @@ class CareAgentOrchestrator:
                 "sdoh_risk_level": profile["sdoh_risk_level"]
             },
             "risk_results": risk_results,
-            "recommendations": recs,
+            "recommendations": formatted_recs,
             "history_count": len(past_runs)
         }
         
@@ -487,7 +521,7 @@ class CareAgentOrchestrator:
                     },
                     "recommendations": {
                         "risk_drivers": [],
-                        "clinical_recommendations": ["No active encounters. Schedule standard wellness check-up."],
+                        "clinical_recommendations": [{"text": "No active encounters. Schedule standard wellness check-up.", "completed": False}],
                         "sdoh_interventions": [],
                         "clinical_rationale": "No recent encounters found in patient record."
                     }

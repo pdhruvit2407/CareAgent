@@ -37,6 +37,11 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
 
+class ChecklistUpdateRequest(BaseModel):
+    category: str  # "clinical" or "sdoh"
+    index: int
+    completed: bool
+
 
 @app.get("/")
 def read_root():
@@ -172,6 +177,14 @@ def get_agent_summary(patient_id: int):
         "sdoh_interventions": latest_eval["recommendations"]["sdoh_interventions"],
         "clinical_rationale": latest_eval["recommendations"]["clinical_rationale"]
     }
+
+
+@app.post("/patients/{patient_id}/checklist")
+def update_checklist_item(patient_id: int, request: ChecklistUpdateRequest):
+    success = orchestrator.memory.update_checklist(patient_id, request.category, request.index, request.completed)
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to update checklist item in memory.")
+    return {"status": "success"}
 
 
 @app.post("/chat", response_model=ChatResponse)
