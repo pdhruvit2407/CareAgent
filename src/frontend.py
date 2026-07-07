@@ -5,8 +5,8 @@ import json
 
 # Set Page Config
 st.set_page_config(
-    page_title="CareAgent Dashboard",
-    page_icon="🏥",
+    page_title="Kavach.AI | Clinical Shield",
+    page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -27,24 +27,24 @@ html, body, [class*="css"], .stMarkdown {
 
 /* Custom header banner */
 .header-container {
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    background: linear-gradient(135deg, #081c19 0%, #0d9488 100%);
     padding: 2.5rem;
     border-radius: 16px;
     margin-bottom: 2rem;
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(13, 148, 136, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     color: white;
 }
 .header-title {
-    font-size: 2.5rem;
+    font-size: 2.7rem;
     font-weight: 700;
     margin: 0;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.8px;
 }
 .header-subtitle {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: 300;
-    opacity: 0.9;
+    opacity: 0.95;
     margin-top: 0.5rem;
 }
 
@@ -179,8 +179,8 @@ html, body, [class*="css"], .stMarkdown {
 # Custom Header HTML
 st.markdown("""
 <div class="header-container">
-    <div class="header-title">🏥 CareAgent Dashboard</div>
-    <div class="header-subtitle">Clinical AI Agent System for 30-Day Hospital Readmission Risk Mitigation & SDOH Coordination</div>
+    <div class="header-title">🛡️ Kavach.AI</div>
+    <div class="header-subtitle">Shielding Patients, Bridging Care — Clinical AI Risk Shield & Social Care Coordinator</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -391,7 +391,7 @@ if response_data:
                 st.markdown(f"""
                 <div class="glass-card">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h3 style="margin:0;">📊 CareAgent Readmission Analysis</h3>
+                        <h3 style="margin:0;">📊 Kavach.AI Readmission Analysis</h3>
                         <div>
                             <span class="badge {band_class}" style="margin-right:8px;">{band} Risk</span>
                             <span class="badge {care_class}">{care_level} Care</span>
@@ -502,9 +502,9 @@ if response_data:
                 else:
                     st.info("No prior encounters recorded for this patient.")
 
-            # --- CHAT WITH CAREAGENT ---
-            st.markdown("<h3 style='margin-top:2rem;'>💬 Chat with CareAgent Clinical Assistant</h3>", unsafe_allow_html=True)
-            st.markdown("<p style='font-size:0.9rem; opacity:0.8; margin-bottom:1.5rem;'>Ask CareAgent about this patient's clinical barriers, social risks, or discharge readiness.</p>", unsafe_allow_html=True)
+            # --- CHAT WITH KAVACH ---
+            st.markdown("<h3 style='margin-top:2rem;'>💬 Chat with Kavach Clinical Assistant</h3>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:0.9rem; opacity:0.8; margin-bottom:1.5rem;'>Ask Kavach about this patient's clinical barriers, social risks, or discharge readiness.</p>", unsafe_allow_html=True)
             
             # Initialize chat history in session state specific to the patient
             chat_state_key = f"chat_history_{selected_patient_id}"
@@ -517,7 +517,7 @@ if response_data:
                     st.markdown(message["content"])
                     
             # User Input
-            if prompt := st.chat_input("Ask CareAgent a question..."):
+            if prompt := st.chat_input("Ask Kavach a question..."):
                 # Display user message
                 with st.chat_message("user"):
                     st.markdown(prompt)
@@ -525,7 +525,7 @@ if response_data:
                 
                 # Fetch agent response
                 with st.chat_message("assistant"):
-                    with st.spinner("CareAgent analyzing context..."):
+                    with st.spinner("Kavach analyzing context..."):
                         response = send_chat_message(selected_patient_id, prompt)
                         st.markdown(response)
                 st.session_state[chat_state_key].append({"role": "assistant", "content": response})

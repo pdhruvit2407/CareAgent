@@ -8,7 +8,7 @@ from typing import Optional, List
 from src.agent import CareAgentOrchestrator
 
 app = FastAPI(
-    title="CareAgent Backend API",
+    title="Kavach.AI Backend API",
     description="REST API for readmission risk prediction and care coordination recommendations.",
     version="1.0.0"
 )
