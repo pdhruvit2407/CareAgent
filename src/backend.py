@@ -229,6 +229,10 @@ def chat_with_careagent(request: ChatRequest):
                     "recs": h["recommendations"]["clinical_recommendations"]
                 })
                 
+            # Clean recommendations list for text insertion
+            clin_list = [r["text"] if isinstance(r, dict) else r for r in recs.get("clinical_recommendations", [])]
+            sdoh_list = [r["text"] if isinstance(r, dict) else r for r in recs.get("sdoh_interventions", [])]
+            
             prompt = f"""
 You are CareAgent, the AI Care Coordinator. You are chatting with a healthcare provider about Patient {patient_id}.
 Respond professionally, empathetically, and concisely in markdown.
@@ -242,8 +246,8 @@ Patient Context:
 - Care Management Level: {care_level}
 
 Current Recommendations:
-- Clinical: {', '.join(recs.get('clinical_recommendations', []))}
-- SDOH Interventions: {', '.join(recs.get('sdoh_interventions', []))}
+- Clinical: {', '.join(clin_list)}
+- SDOH Interventions: {', '.join(sdoh_list)}
 - Rationale: {recs.get('clinical_rationale', '')}
 
 Longitudinal History (Memory):
@@ -286,7 +290,8 @@ Please address the user's query using the patient's data, risk models, and clini
         resp_text += "**Clinical Interventions:**\n"
         if recs.get("clinical_recommendations"):
             for r in recs["clinical_recommendations"]:
-                resp_text += f"- {r}\n"
+                text = r["text"] if isinstance(r, dict) else r
+                resp_text += f"- {text}\n"
         else:
             resp_text += "- Schedule standard post-discharge follow-up within 7-14 days.\n"
             
@@ -294,7 +299,8 @@ Please address the user's query using the patient's data, risk models, and clini
             resp_text += "\n**SDOH / Social Interventions:**\n"
             if recs.get("sdoh_interventions"):
                 for r in recs["sdoh_interventions"]:
-                    resp_text += f"- {r}\n"
+                    text = r["text"] if isinstance(r, dict) else r
+                    resp_text += f"- {text}\n"
             else:
                 resp_text += "- Screen for and coordinate social needs as appropriate.\n"
                 
