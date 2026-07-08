@@ -26,6 +26,24 @@ app.add_middleware(
 # Will lazy-initialize tools and load data/models
 orchestrator = CareAgentOrchestrator()
 
+@app.on_event("startup")
+def pre_populate_evaluations():
+    try:
+        patients_df = orchestrator.data_tool.patients_df
+        if patients_df is not None:
+            populated_count = len(orchestrator.memory.memory)
+            if populated_count < 20:
+                print("Pre-populating patient memory evaluations...")
+                p_ids = patients_df["patient_id"].head(100).tolist()
+                for p_id in p_ids:
+                    profile = orchestrator.data_tool.get_patient_profile(p_id)
+                    if profile and profile.get("encounters"):
+                        latest_enc = profile["encounters"][-1]
+                        orchestrator.process_discharge_event(latest_enc["encounter_id"], bypass_gemini=True)
+                print("Patient memory pre-population complete!")
+    except Exception as e:
+        print(f"Error pre-populating patient memory: {e}")
+
 # Pydantic Schemas
 class DischargeEvent(BaseModel):
     encounter_id: int

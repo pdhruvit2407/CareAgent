@@ -419,7 +419,7 @@ class CareAgentOrchestrator:
         self.logging_tool = LoggingTool(log_path=log_path)
         self.memory = PatientMemory(memory_path=memory_path)
         
-    def process_discharge_event(self, encounter_id):
+    def process_discharge_event(self, encounter_id, bypass_gemini=False):
         # 1. Fetch encounter
         enc = self.data_tool.get_encounter(encounter_id)
         if not enc:
@@ -452,7 +452,10 @@ class CareAgentOrchestrator:
         risk_results = self.risk_tool.predict_risk(profile, enc)
         
         # 5. Generate recommendations
-        recs = self.recommendation_tool.generate_recommendations(profile, risk_results, memory_context)
+        if bypass_gemini:
+            recs = self.recommendation_tool._generate_rule_based(profile, risk_results, memory_context)
+        else:
+            recs = self.recommendation_tool.generate_recommendations(profile, risk_results, memory_context)
         
         # Format recommendations to include checklist completion state
         formatted_recs = {
