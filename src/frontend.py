@@ -224,11 +224,31 @@ def send_chat_message(patient_id, msg):
 # --- Sidebar Filters & Patient Selector ---
 st.sidebar.markdown("### 🔍 Patient Registry Filters")
 
-risk_filter = st.sidebar.selectbox("Readmission Risk Band", ["All", "High", "Medium", "Low"])
-care_filter = st.sidebar.selectbox("Care Management Level", ["All", "Intensive", "Enhanced", "Routine"])
-sdoh_filter = st.sidebar.selectbox("SDOH Risk Level", ["All", "High", "Moderate", "Low"])
-search_id = st.sidebar.text_input("Search Patient ID")
-monitored_filter = st.sidebar.checkbox("⭐ Monitored Patients Only", value=False)
+# Initialize session state for filters if not present
+if "filter_risk" not in st.session_state:
+    st.session_state.filter_risk = "All"
+if "filter_care" not in st.session_state:
+    st.session_state.filter_care = "All"
+if "filter_sdoh" not in st.session_state:
+    st.session_state.filter_sdoh = "All"
+if "filter_search" not in st.session_state:
+    st.session_state.filter_search = ""
+if "filter_monitored" not in st.session_state:
+    st.session_state.filter_monitored = False
+
+risk_filter = st.sidebar.selectbox("Readmission Risk Band", ["All", "High", "Medium", "Low"], key="filter_risk")
+care_filter = st.sidebar.selectbox("Care Management Level", ["All", "Intensive", "Enhanced", "Routine"], key="filter_care")
+sdoh_filter = st.sidebar.selectbox("SDOH Risk Level", ["All", "High", "Moderate", "Low"], key="filter_sdoh")
+search_id = st.sidebar.text_input("Search Patient ID", key="filter_search")
+monitored_filter = st.sidebar.checkbox("⭐ Monitored Patients Only", key="filter_monitored")
+
+if st.sidebar.button("🏠 Reset Filters", use_container_width=True):
+    st.session_state.filter_risk = "All"
+    st.session_state.filter_care = "All"
+    st.session_state.filter_sdoh = "All"
+    st.session_state.filter_search = ""
+    st.session_state.filter_monitored = False
+    st.rerun()
 
 # Construct query params
 params = {"limit": 5000} # Fetch all matching to show counts and selection
@@ -534,19 +554,29 @@ if response_data:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
                     
-            # User Input
-            if prompt := st.chat_input("Ask CareAgent a question..."):
-                # Display user message
-                with st.chat_message("user"):
-                    st.markdown(prompt)
+            # User Input (using stable inline inputs to avoid viewport-pinning auto-scroll issues)
+            input_key = f"chat_input_val_{selected_patient_id}"
+            chat_col, btn_col = st.columns([5, 1])
+            with chat_col:
+                user_msg = st.text_input("Ask CareAgent a question...", placeholder="Type your question here...", key=input_key, label_visibility="collapsed")
+            with btn_col:
+                submit_chat = st.button("Send", key=f"chat_submit_{selected_patient_id}", use_container_width=True)
+                
+            if (submit_chat or (user_msg and user_msg != st.session_state.get(f"last_chat_{selected_patient_id}"))) and user_msg.strip():
+                prompt = user_msg.strip()
+                st.session_state[f"last_chat_{selected_patient_id}"] = prompt
+                
+                # Clear text input
+                st.session_state[input_key] = ""
+                
+                # Update session state with user message
                 st.session_state[chat_state_key].append({"role": "user", "content": prompt})
                 
                 # Fetch agent response
-                with st.chat_message("assistant"):
-                    with st.spinner("CareAgent analyzing context..."):
-                        response = send_chat_message(selected_patient_id, prompt)
-                        st.markdown(response)
+                with st.spinner("CareAgent analyzing context..."):
+                    response = send_chat_message(selected_patient_id, prompt)
                 st.session_state[chat_state_key].append({"role": "assistant", "content": response})
+                st.rerun()
     else:
         st.info("No patients found matching the selected filters.")
 else:
