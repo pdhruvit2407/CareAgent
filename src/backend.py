@@ -93,19 +93,27 @@ def get_patients(
         # Join patients with SDOH
         df = patients_df.merge(sdoh_df, on="patient_id", how="left")
         
-        # Load memory for all patients to get latest risk scores and care levels
-        # If memory doesn't exist, we fallback to default low/routine or run default prediction.
-        # To avoid running inference on all 5000 patients on list load, we can check memory
-        # or compute a quick heuristic, or run actual model predictions for the matching patients.
-        # A smart way is to load predictions from our log or run batch predictions.
-        # Since we want it to be fast, we will read the Memory data which stores latest runs.
+        # Fetch all patient histories in a single batch read from Firestore to prevent 5000+ sequential queries
+        db_histories = {}
+        if orchestrator.memory.db:
+            try:
+                docs = orchestrator.memory.db.collection(orchestrator.memory.collection_name).get()
+                db_histories = {doc.id: doc.to_dict().get("history", []) for doc in docs}
+            except Exception as e:
+                print(f"Error fetching batch histories from Firestore: {e}")
         
         results = []
         for _, row in df.iterrows():
             p_id = int(row["patient_id"])
+            p_id_str = str(p_id)
             
-            # Check memory for latest run
-            mem_runs = orchestrator.memory.get_history(p_id)
+            # Read from pre-fetched batch dict or fallback to local memory
+            if p_id_str in db_histories:
+                mem_runs = db_histories[p_id_str]
+            elif not orchestrator.memory.db:
+                mem_runs = orchestrator.memory.local_memory.get(p_id, [])
+            else:
+                mem_runs = []
             
             if mem_runs:
                 latest = mem_runs[-1]
