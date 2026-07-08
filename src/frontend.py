@@ -242,13 +242,14 @@ sdoh_filter = st.sidebar.selectbox("SDOH Risk Level", ["All", "High", "Moderate"
 search_id = st.sidebar.text_input("Search Patient ID", key="filter_search")
 monitored_filter = st.sidebar.checkbox("⭐ Monitored Patients Only", key="filter_monitored")
 
-if st.sidebar.button("🏠 Reset Filters", use_container_width=True):
+def reset_filters():
     st.session_state.filter_risk = "All"
     st.session_state.filter_care = "All"
     st.session_state.filter_sdoh = "All"
     st.session_state.filter_search = ""
     st.session_state.filter_monitored = False
-    st.rerun()
+
+st.sidebar.button("🏠 Reset Filters", on_click=reset_filters, use_container_width=True)
 
 # Construct query params
 params = {"limit": 5000} # Fetch all matching to show counts and selection
