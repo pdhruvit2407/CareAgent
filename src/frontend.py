@@ -555,20 +555,17 @@ if response_data:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
                     
-            # User Input (using stable inline inputs to avoid viewport-pinning auto-scroll issues)
+            # User Input (using stable inline inputs and forms to avoid viewport-pinning and lifecycle issues)
             input_key = f"chat_input_val_{selected_patient_id}"
-            chat_col, btn_col = st.columns([5, 1])
-            with chat_col:
-                user_msg = st.text_input("Ask CareAgent a question...", placeholder="Type your question here...", key=input_key, label_visibility="collapsed")
-            with btn_col:
-                submit_chat = st.button("Send", key=f"chat_submit_{selected_patient_id}", use_container_width=True)
-                
-            if (submit_chat or (user_msg and user_msg != st.session_state.get(f"last_chat_{selected_patient_id}"))) and user_msg.strip():
+            with st.form(key=f"chat_form_{selected_patient_id}", clear_on_submit=True):
+                chat_col, btn_col = st.columns([5, 1])
+                with chat_col:
+                    user_msg = st.text_input("Ask CareAgent a question...", placeholder="Type your question here...", key=input_key, label_visibility="collapsed")
+                with btn_col:
+                    submit_chat = st.form_submit_button("Send", use_container_width=True)
+                    
+            if submit_chat and user_msg.strip():
                 prompt = user_msg.strip()
-                st.session_state[f"last_chat_{selected_patient_id}"] = prompt
-                
-                # Clear text input
-                st.session_state[input_key] = ""
                 
                 # Update session state with user message
                 st.session_state[chat_state_key].append({"role": "user", "content": prompt})
