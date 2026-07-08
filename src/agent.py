@@ -375,6 +375,7 @@ class PatientMemory:
             print(f"Warning: Failed to initialize Firestore client: {e}. Falling back to local pickle memory.")
             
         self.local_memory = {}
+        self.local_monitored = set()
         if not self.db:
             self.load_local_memory()
             
@@ -385,6 +386,15 @@ class PatientMemory:
                     self.local_memory = pickle.load(f)
             except Exception:
                 self.local_memory = {}
+        
+        # Load local monitored IDs
+        monitored_path = self.memory_path.replace("memory.pkl", "monitored.pkl")
+        if os.path.exists(monitored_path):
+            try:
+                with open(monitored_path, "rb") as f:
+                    self.local_monitored = pickle.load(f)
+            except Exception:
+                self.local_monitored = set()
                 
     def save_local_memory(self):
         os.makedirs(os.path.dirname(self.memory_path), exist_ok=True)
@@ -393,6 +403,14 @@ class PatientMemory:
                 pickle.dump(self.local_memory, f)
         except Exception as e:
             print(f"Error saving local patient memory: {e}")
+            
+        # Save local monitored IDs
+        monitored_path = self.memory_path.replace("memory.pkl", "monitored.pkl")
+        try:
+            with open(monitored_path, "wb") as f:
+                pickle.dump(self.local_monitored, f)
+        except Exception as e:
+            print(f"Error saving local monitored list: {e}")
             
     @property
     def memory(self):
@@ -425,7 +443,7 @@ class PatientMemory:
         if self.db:
             try:
                 doc_ref = self.db.collection(self.collection_name).document(p_id_str)
-                doc_ref.set({"history": history})
+                doc_ref.set({"history": history}, merge=True)
                 return
             except Exception as e:
                 print(f"Error writing to Firestore: {e}")
@@ -452,7 +470,7 @@ class PatientMemory:
                 if self.db:
                     try:
                         doc_ref = self.db.collection(self.collection_name).document(p_id_str)
-                        doc_ref.set({"history": history})
+                        doc_ref.set({"history": history}, merge=True)
                         return True
                     except Exception as e:
                         print(f"Error writing checklist to Firestore: {e}")
@@ -462,6 +480,47 @@ class PatientMemory:
                     self.save_local_memory()
                     return True
         return False
+
+    def is_monitored(self, patient_id) -> bool:
+        p_id_str = str(patient_id)
+        if self.db:
+            try:
+                doc_ref = self.db.collection(self.collection_name).document(p_id_str)
+                doc = doc_ref.get()
+                if doc.exists:
+                    return doc.to_dict().get("monitored", False)
+            except Exception as e:
+                print(f"Error checking monitoring status in Firestore: {e}")
+        return int(patient_id) in self.local_monitored
+
+    def toggle_monitored(self, patient_id, status: bool) -> bool:
+        p_id_str = str(patient_id)
+        if self.db:
+            try:
+                doc_ref = self.db.collection(self.collection_name).document(p_id_str)
+                doc_ref.set({"monitored": status}, merge=True)
+                return True
+            except Exception as e:
+                print(f"Error toggling monitoring in Firestore: {e}")
+                return False
+        
+        # Local fallback
+        p_id = int(patient_id)
+        if status:
+            self.local_monitored.add(p_id)
+        else:
+            self.local_monitored.discard(p_id)
+        self.save_local_memory()
+        return True
+
+    def get_monitored_patients(self) -> list:
+        if self.db:
+            try:
+                docs = self.db.collection(self.collection_name).where("monitored", "==", True).get()
+                return [int(doc.id) for doc in docs]
+            except Exception as e:
+                print(f"Error getting monitored patients from Firestore: {e}")
+        return list(self.local_monitored)
 
 
 class CareAgentOrchestrator:
@@ -586,5 +645,6 @@ class CareAgentOrchestrator:
         return {
             "profile": profile,
             "latest_evaluation": latest_run,
-            "history": past_runs
+            "history": past_runs,
+            "monitored": self.memory.is_monitored(patient_id)
         }

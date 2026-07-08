@@ -228,6 +228,7 @@ risk_filter = st.sidebar.selectbox("Readmission Risk Band", ["All", "High", "Med
 care_filter = st.sidebar.selectbox("Care Management Level", ["All", "Intensive", "Enhanced", "Routine"])
 sdoh_filter = st.sidebar.selectbox("SDOH Risk Level", ["All", "High", "Moderate", "Low"])
 search_id = st.sidebar.text_input("Search Patient ID")
+monitored_filter = st.sidebar.checkbox("⭐ Monitored Patients Only", value=False)
 
 # Construct query params
 params = {"limit": 5000} # Fetch all matching to show counts and selection
@@ -239,6 +240,8 @@ if sdoh_filter != "All":
     params["sdoh_risk"] = sdoh_filter
 if search_id.strip():
     params["search"] = search_id.strip()
+if monitored_filter:
+    params["monitored"] = True
 
 # Fetch list of filtered patients
 response_data = fetch_patients(params)
@@ -297,6 +300,21 @@ if response_data:
             profile = detail["profile"]
             latest_eval = detail["latest_evaluation"]
             encounters = profile.get("encounters", [])
+            is_monitored = detail.get("monitored", False)
+            
+            # Monitoring Action Header
+            col_name, col_btn = st.columns([3, 1])
+            with col_name:
+                st.markdown(f"<h2 style='margin-bottom:0;'>👤 Patient {selected_patient_id} Detail View</h2>", unsafe_allow_html=True)
+            with col_btn:
+                st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+                btn_lbl = "⭐ Monitored" if is_monitored else "☆ Monitor Patient"
+                if st.button(btn_lbl, key=f"mon_toggle_{selected_patient_id}", use_container_width=True):
+                    try:
+                        requests.post(f"{BACKEND_URL}/patients/{selected_patient_id}/monitor", json={"monitored": not is_monitored})
+                        st.rerun()
+                    except Exception as e:
+                        st.error("Failed to update monitoring status.")
             
             # Extract latest evaluation fields
             latest_run = latest_eval if "risk_results" in latest_eval else latest_eval.get("latest_evaluation", {})

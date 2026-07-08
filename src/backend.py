@@ -67,6 +67,9 @@ class ChecklistUpdateRequest(BaseModel):
     index: int
     completed: bool
 
+class MonitorUpdateRequest(BaseModel):
+    monitored: bool
+
 
 @app.get("/")
 def read_root():
@@ -79,6 +82,7 @@ def get_patients(
     care_level: Optional[str] = Query(None, description="Filter by care level (Routine, Enhanced, Intensive)"),
     sdoh_risk: Optional[str] = Query(None, description="Filter by SDOH risk level (Low, Moderate, High)"),
     search: Optional[str] = Query(None, description="Search by Patient ID"),
+    monitored: Optional[bool] = Query(None, description="Filter by monitored status"),
     limit: int = 100,
     offset: int = 0
 ):
@@ -94,13 +98,13 @@ def get_patients(
         df = patients_df.merge(sdoh_df, on="patient_id", how="left")
         
         # Fetch all patient histories in a single batch read from Firestore to prevent 5000+ sequential queries
-        db_histories = {}
+        db_docs = {}
         if orchestrator.memory.db:
             try:
                 docs = orchestrator.memory.db.collection(orchestrator.memory.collection_name).get()
-                db_histories = {doc.id: doc.to_dict().get("history", []) for doc in docs}
+                db_docs = {doc.id: doc.to_dict() for doc in docs}
             except Exception as e:
-                print(f"Error fetching batch histories from Firestore: {e}")
+                print(f"Error fetching batch documents from Firestore: {e}")
         
         results = []
         for _, row in df.iterrows():
@@ -108,10 +112,14 @@ def get_patients(
             p_id_str = str(p_id)
             
             # Read from pre-fetched batch dict or fallback to local memory
-            if p_id_str in db_histories:
-                mem_runs = db_histories[p_id_str]
+            is_pat_monitored = False
+            if p_id_str in db_docs:
+                doc_data = db_docs[p_id_str]
+                mem_runs = doc_data.get("history", [])
+                is_pat_monitored = doc_data.get("monitored", False)
             elif not orchestrator.memory.db:
                 mem_runs = orchestrator.memory.local_memory.get(p_id, [])
+                is_pat_monitored = p_id in orchestrator.memory.local_monitored
             else:
                 mem_runs = []
             
@@ -130,6 +138,8 @@ def get_patients(
                 care = "Routine" if prob <= 0.20 and sdoh_score == 0 else ("Enhanced" if prob <= 0.40 or sdoh_score < 3 else "Intensive")
             
             # Apply filters
+            if monitored is True and not is_pat_monitored:
+                continue
             if risk_band and band != risk_band:
                 continue
             if care_level and care != care_level:
@@ -172,6 +182,14 @@ def get_patient_detail(patient_id: int):
     if "error" in summary:
         raise HTTPException(status_code=404, detail=summary["error"])
     return summary
+
+@app.post("/patients/{patient_id}/monitor")
+def toggle_patient_monitoring(patient_id: int, request: MonitorUpdateRequest):
+    success = orchestrator.memory.toggle_monitored(patient_id, request.monitored)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update monitoring status.")
+    return {"status": "success", "monitored": request.monitored}
+
 
 
 @app.post("/events/discharge")
