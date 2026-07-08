@@ -4,6 +4,10 @@ import pickle
 import pandas as pd
 import numpy as np
 from datetime import datetime
+try:
+    from google.cloud import firestore
+except ImportError:
+    pass
 
 # Optional Google GenAI SDK import
 try:
@@ -360,40 +364,79 @@ class LoggingTool:
 
 
 class PatientMemory:
-    def __init__(self, memory_path="data/careagent_memory.pkl"):
+    def __init__(self, memory_path="data/careagent_memory.pkl", collection_name="patients_memory"):
         self.memory_path = memory_path
-        self.memory = {}
-        self.load_memory()
-        
-    def load_memory(self):
+        self.collection_name = collection_name
+        self.db = None
+        try:
+            self.db = firestore.Client()
+            print("Firestore client successfully initialized.")
+        except Exception as e:
+            print(f"Warning: Failed to initialize Firestore client: {e}. Falling back to local pickle memory.")
+            
+        self.local_memory = {}
+        if not self.db:
+            self.load_local_memory()
+            
+    def load_local_memory(self):
         if os.path.exists(self.memory_path):
             try:
                 with open(self.memory_path, "rb") as f:
-                    self.memory = pickle.load(f)
+                    self.local_memory = pickle.load(f)
             except Exception:
-                self.memory = {}
+                self.local_memory = {}
                 
-    def save_memory(self):
+    def save_local_memory(self):
         os.makedirs(os.path.dirname(self.memory_path), exist_ok=True)
         try:
             with open(self.memory_path, "wb") as f:
-                pickle.dump(self.memory, f)
+                pickle.dump(self.local_memory, f)
         except Exception as e:
-            print(f"Error saving patient memory: {e}")
+            print(f"Error saving local patient memory: {e}")
             
+    @property
+    def memory(self):
+        # Backward compatibility for startup count check
+        if self.db:
+            try:
+                docs = self.db.collection(self.collection_name).limit(25).get()
+                return {doc.id: True for doc in docs}
+            except Exception:
+                return {}
+        return self.local_memory
+        
     def get_history(self, patient_id):
-        return self.memory.get(patient_id, [])
+        p_id_str = str(patient_id)
+        if self.db:
+            try:
+                doc_ref = self.db.collection(self.collection_name).document(p_id_str)
+                doc = doc_ref.get()
+                if doc.exists:
+                    return doc.to_dict().get("history", [])
+            except Exception as e:
+                print(f"Error reading from Firestore: {e}")
+        return self.local_memory.get(patient_id, [])
         
     def update_history(self, patient_id, run_record):
-        if patient_id not in self.memory:
-            self.memory[patient_id] = []
-        self.memory[patient_id].append(run_record)
-        self.save_memory()
+        p_id_str = str(patient_id)
+        history = self.get_history(patient_id)
+        history.append(run_record)
+        
+        if self.db:
+            try:
+                doc_ref = self.db.collection(self.collection_name).document(p_id_str)
+                doc_ref.set({"history": history})
+                return
+            except Exception as e:
+                print(f"Error writing to Firestore: {e}")
+        self.local_memory[patient_id] = history
+        self.save_local_memory()
 
     def update_checklist(self, patient_id, category, index, completed):
-        if patient_id in self.memory and self.memory[patient_id]:
-            # Get latest run
-            latest_run = self.memory[patient_id][-1]
+        p_id_str = str(patient_id)
+        history = self.get_history(patient_id)
+        if history:
+            latest_run = history[-1]
             if category == "clinical":
                 key = "clinical_recommendations"
             else:
@@ -404,10 +447,20 @@ class PatientMemory:
                 if isinstance(recs[index], dict):
                     recs[index]["completed"] = completed
                 else:
-                    # If it's a string, convert to dict
                     recs[index] = {"text": recs[index], "completed": completed}
-                self.save_memory()
-                return True
+                    
+                if self.db:
+                    try:
+                        doc_ref = self.db.collection(self.collection_name).document(p_id_str)
+                        doc_ref.set({"history": history})
+                        return True
+                    except Exception as e:
+                        print(f"Error writing checklist to Firestore: {e}")
+                        return False
+                else:
+                    self.local_memory[patient_id] = history
+                    self.save_local_memory()
+                    return True
         return False
 
 
