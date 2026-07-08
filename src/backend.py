@@ -26,8 +26,9 @@ app.add_middleware(
 # Will lazy-initialize tools and load data/models
 orchestrator = CareAgentOrchestrator()
 
-@app.on_event("startup")
-def pre_populate_evaluations():
+import threading
+
+def run_pre_population():
     try:
         patients_df = orchestrator.data_tool.patients_df
         if patients_df is not None:
@@ -43,6 +44,12 @@ def pre_populate_evaluations():
                 print("Patient memory pre-population complete!")
     except Exception as e:
         print(f"Error pre-populating patient memory: {e}")
+
+@app.on_event("startup")
+def startup_event():
+    # Start pre-population in a background thread to prevent blocking Uvicorn server startup
+    thread = threading.Thread(target=run_pre_population)
+    thread.start()
 
 # Pydantic Schemas
 class DischargeEvent(BaseModel):
