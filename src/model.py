@@ -1,3 +1,21 @@
+"""
+===============================================================================
+CAREAGENT: RANDOM FOREST MACHINE LEARNING PIPELINE (model.py)
+===============================================================================
+PURPOSE:
+This module trains, evaluates, and serializes the primary Random Forest 
+Classifier model used by CareAgent to predict 30-day hospital readmission risk.
+
+KEY OPERATIONS:
+1. Data Ingestion & Merging : Combines patient demographics, encounters, and SDOH data.
+2. Categorical Encoding     : Uses LabelEncoders for categorical features (Diagnosis, Insurance).
+3. Leakage-Free Split       : Performs Patient-Level Train/Test Split (80/20) to prevent data leakage.
+4. Model Training           : Trains a 100-tree Random Forest Classifier.
+5. Evaluation & Export      : Calculates Accuracy & ROC-AUC, outputs Feature Importance, 
+                              and serializes model artifacts to src/model_artifacts.pkl.
+===============================================================================
+"""
+
 import os
 import pickle
 import pandas as pd
@@ -8,6 +26,10 @@ from sklearn.metrics import accuracy_score, roc_auc_score, classification_report
 from sklearn.preprocessing import LabelEncoder
 
 def train_baseline_model(data_dir="data", model_dir="src"):
+    """
+    Loads raw healthcare datasets, performs feature engineering & encoding,
+    trains the Random Forest Classifier, evaluates performance metrics, and saves model artifacts.
+    """
     print("Loading data for model training...")
     
     # Load files

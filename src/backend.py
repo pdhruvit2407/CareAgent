@@ -1,3 +1,23 @@
+"""
+===============================================================================
+CAREAGENT: FASTAPI BACKEND REST SERVER (backend.py)
+===============================================================================
+PURPOSE:
+This module powers the high-performance FastAPI backend web service for CareAgent.
+It exposes RESTful endpoints for patient registry queries, risk evaluation execution,
+patient discharge simulation, interactive checklist persistence, clinical Q&A chatbot,
+and monitoring bucket management.
+
+KEY REST ENDPOINTS:
+- GET  /patients                      : Queries patient registry with risk, SDOH, and care tier filters.
+- GET  /patients/{patient_id}         : Fetches full profile, demographics, encounters, and latest evaluation.
+- POST /patients/{patient_id}/discharge: Simulates a live discharge event & triggers CareAgent AI inference.
+- POST /patients/{patient_id}/checklist: Updates completed status for clinical/SDOH checklist items.
+- POST /chat                          : Interactive clinical Q&A assistant powered by Gemini 2.5 Flash.
+- POST /patients/{patient_id}/monitor : Toggles a patient's starred/monitored status.
+===============================================================================
+"""
+
 import os
 import json
 from fastapi import FastAPI, HTTPException, Query

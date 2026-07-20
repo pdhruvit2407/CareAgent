@@ -1,3 +1,22 @@
+"""
+===============================================================================
+CAREAGENT: AI CLINICAL ORCHESTRATOR & TOOLS (agent.py)
+===============================================================================
+PURPOSE:
+This module defines the central CareAgent Orchestrator and its specialized tools.
+It interfaces between raw healthcare databases, machine learning inference engines,
+longitudinal Firestore memory, and the Gemini 2.5 Flash LLM.
+
+ARCHITECTURE & TOOL MATRIX:
+1. PatientDataTool     : Retrieves patient demographics, SDOH screening scores, & encounter histories.
+2. RiskModelTool       : Executes Random Forest model inference to calculate 30-day readmission risk.
+3. MemoryTool          : Persists & retrieves patient evaluations across Google Cloud Firestore and local pickle storage.
+4. RecommendationTool  : Prompts Gemini 2.5 Flash (via RAG) to generate clinical rationale and checklists.
+5. DecisionAuditLogger : Appends full clinical decision payloads to data/careagent_decisions_log.csv.
+6. CareAgentOrchestrator: Coordinates end-to-end evaluation execution and chatbot Q&A workflows.
+===============================================================================
+"""
+
 import os
 import json
 import pickle

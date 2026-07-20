@@ -1,8 +1,32 @@
+"""
+===============================================================================
+CAREAGENT: SYNTHETIC HEALTHCARE DATA GENERATOR (data_generator.py)
+===============================================================================
+PURPOSE:
+This script generates a realistic, clinically representative synthetic dataset of
+5,000 patients and ~12,000 hospital encounters. It simulates electronic health record
+(EHR) demographic fields, Social Determinants of Health (SDOH) screening surveys, 
+and 30-day hospital readmission targets driven by realistic clinical risk equations.
+
+KEY OUTPUT DATASETS GENERATED (saved to data/):
+1. careagent_patients_5000.csv   : Patient demographics, insurance, & SDOH survey flags.
+2. careagent_sdoh_5000.csv       : Computed SDOH risk scores (0-4) and risk tiers.
+3. careagent_encounters_5000.csv : Longitudinal hospital admission/discharge records.
+===============================================================================
+"""
+
 import os
 import pandas as pd
 import numpy as np
 
 def generate_synthetic_data(data_dir="data", num_patients=5000):
+    """
+    Generates synthetic patient demographics, SDOH screening scores, and encounter records.
+    
+    Parameters:
+        data_dir (str): Directory where output CSV files will be saved.
+        num_patients (int): Number of synthetic patient records to generate.
+    """
     # Set seed for reproducibility
     np.random.seed(42)
     

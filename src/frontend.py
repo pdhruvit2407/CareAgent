@@ -1,3 +1,23 @@
+"""
+===============================================================================
+CAREAGENT: STREAMLIT CLINICAL DASHBOARD (frontend.py)
+===============================================================================
+PURPOSE:
+This module provides a state-of-the-art Streamlit web interface for care coordinators,
+clinicians, and health system managers. It renders dynamic risk gauges, PRAPARE SDOH
+hover tooltips, interactive post-discharge checklists, longitudinal history timelines,
+EHR discharge simulators, and an inline Gemini clinical assistant chatbot.
+
+KEY USER INTERFACE FEATURES:
+1. Patient Registry Filters : Filter patients by Risk Band, Care Tier, SDOH Level, ID, or Starred Status.
+2. Reset Filters Callback   : Native Streamlit callback button to clear all filters without lifecycle errors.
+3. Patient Profile & SDOH   : Displays demographics and PRAPARE screening question hover tooltips.
+4. Risk Gauge & Drivers     : Visualizes 30-day readmission risk probability and AI clinical risk drivers.
+5. Interactive Checklists  : Persists completed clinical actions & SDOH interventions to backend storage.
+6. Chatbot Assistant Form   : Inline Streamlit form with clear_on_submit=True to query Gemini on patient context.
+===============================================================================
+"""
+
 import streamlit as st
 import pandas as pd
 import requests
