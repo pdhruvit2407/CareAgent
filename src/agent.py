@@ -90,7 +90,7 @@ class RiskModelTool:
         if self.model is None:
             # Simple rule-based score calculation
             score = 0.05
-            if encounter.get("diagnosis_group") in ["CHF", "COPD", "Diabetes"]:
+            if encounter.get("diagnosis_group") in ["CHF", "COPD", "Diabetes", "Asthma"]:
                 score += 0.15
             score += patient_profile.get("sdoh_score", 0) * 0.08
             score += min(len(patient_profile.get("encounters", [])) * 0.05, 0.25)
@@ -252,7 +252,7 @@ Provide concrete, actionable steps. Avoid generic medical advice. If they have S
         
         if prob >= 0.35:
             drivers.append(f"Elevated baseline readmission probability ({prob:.1%})")
-        if diag in ["CHF", "COPD", "Diabetes"]:
+        if diag in ["CHF", "COPD", "Diabetes", "Asthma"]:
             drivers.append(f"Active chronic disease management for {diag}")
         if los > 5:
             drivers.append(f"Prolonged length of stay ({los} days) indicating clinical complexity")
@@ -287,6 +287,8 @@ Provide concrete, actionable steps. Avoid generic medical advice. If they have S
             clinical_recs.append("Confirm inhaler technique demonstration completed. Ensure oxygen supplies (if active) are delivered to home.")
         elif diag == "Diabetes":
             clinical_recs.append("Enroll in outpatient Diabetes self-management education. Review glucometer logs and insulin administration regimen.")
+        elif diag == "Asthma":
+            clinical_recs.append("Provide Asthma Action Plan (Green/Yellow/Red zones). Confirm rescue inhaler access, trigger avoidance counseling, and peak flow meter monitoring.")
             
         # SDOH interventions
         if patient_profile.get("housing_instability") == 1:

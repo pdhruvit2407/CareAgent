@@ -69,8 +69,8 @@ def generate_synthetic_data(data_dir="data", num_patients=5000):
     encounter_id_counter = 100001
     
     # Diagnosis groups
-    diag_groups = ["CHF", "COPD", "Diabetes", "General"]
-    diag_probs = [0.20, 0.20, 0.25, 0.35]
+    diag_groups = ["CHF", "COPD", "Diabetes", "Asthma", "General"]
+    diag_probs = [0.22, 0.22, 0.25, 0.21, 0.10]
     
     for i in range(num_patients):
         p_id = patient_ids[i]
@@ -103,12 +103,12 @@ def generate_synthetic_data(data_dir="data", num_patients=5000):
             
             # Readmission probability formula
             # Base risk: 5%
-            # Chronic diagnosis: CHF/COPD/Diabetes (+12%)
+            # Chronic diagnosis: CHF/COPD/Diabetes/Asthma (+12%)
             # SDOH score: +6% per flag (up to 24%)
             # Prior encounter count: +5% per prior encounter (capped influence)
             # Inpatient encounter has slightly higher risk of readmission: +3%
             p_readmit = 0.05
-            if diag in ["CHF", "COPD", "Diabetes"]:
+            if diag in ["CHF", "COPD", "Diabetes", "Asthma"]:
                 p_readmit += 0.12
             p_readmit += sdoh_score * 0.06
             p_readmit += min(prior_encounters * 0.05, 0.25)
