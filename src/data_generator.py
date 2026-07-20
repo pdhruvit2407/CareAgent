@@ -68,9 +68,9 @@ def generate_synthetic_data(data_dir="data", num_patients=5000):
     encounters_list = []
     encounter_id_counter = 100001
     
-    # Diagnosis groups
-    diag_groups = ["CHF", "COPD", "Diabetes", "Asthma", "General"]
-    diag_probs = [0.22, 0.22, 0.25, 0.21, 0.10]
+    # Diagnosis groups (Specific Chronic Disease Cohorts)
+    diag_groups = ["CHF", "COPD", "Diabetes", "Asthma"]
+    diag_probs = [0.25, 0.25, 0.25, 0.25]
     
     for i in range(num_patients):
         p_id = patient_ids[i]
