@@ -375,21 +375,37 @@ if response_data:
                     <p style="font-size:0.9rem; opacity:0.8; margin-bottom:15px;">SDOH Score: <b>{sdoh_score} out of 4</b> barriers flagged.</p>
                 """, unsafe_allow_html=True)
                 
-                # Render individual flags
+                # Render individual flags with screening question hover tooltips
                 flags = [
-                    ("Housing Instability", "housing_instability"),
-                    ("Food Insecurity", "food_insecurity"),
-                    ("Transportation Barriers", "transportation_barrier"),
-                    ("Low Social Support", "low_social_support")
+                    (
+                        "Housing Instability", 
+                        "housing_instability", 
+                        "PRAPARE Question: 'In the past 12 months, have you worried about losing your housing, or lived in a shelter or temporary housing?'"
+                    ),
+                    (
+                        "Food Insecurity", 
+                        "food_insecurity", 
+                        "PRAPARE Question: 'In the past 12 months, did you worry whether your food would run out before you got money to buy more?'"
+                    ),
+                    (
+                        "Transportation Barriers", 
+                        "transportation_barrier", 
+                        "PRAPARE Question: 'In the past 12 months, has a lack of transportation kept you from medical appointments, meetings, or prescriptions?'"
+                    ),
+                    (
+                        "Low Social Support", 
+                        "low_social_support", 
+                        "PRAPARE Question: 'How often do you feel you have someone you can count on to help you if you get sick or need assistance?'"
+                    )
                 ]
                 
-                for label, key in flags:
+                for label, key, question in flags:
                     is_pos = profile.get(key) == 1
                     status_text = "🔴 Positive" if is_pos else "🟢 Negative"
                     status_class = "positive" if is_pos else "negative"
                     st.markdown(f"""
-                    <div class="sdoh-badge {status_class}">
-                        <span>{label}</span>
+                    <div class="sdoh-badge {status_class}" title="{question}" style="cursor: help;">
+                        <span>{label} ℹ️</span>
                         <span style="font-weight:600;">{status_text}</span>
                     </div>
                     """, unsafe_allow_html=True)
