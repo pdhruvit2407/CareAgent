@@ -200,6 +200,7 @@ class RecommendationTool:
         return self._generate_rule_based(patient_profile, risk_analysis, memory_context)
 
     def _build_prompt(self, patient_profile, risk_analysis, memory_context):
+        diag = patient_profile['encounters'][-1]['diagnosis_group']
         return f"""
 You are CareAgent, an AI clinical coordinator. Your job is to generate highly personalized post-discharge recommendations and explain risk drivers for a patient.
 You must output a raw JSON object and nothing else. No markdown blocks, no leading/trailing conversational text.
@@ -224,7 +225,7 @@ Patient Profile:
   - Low Social Support: {patient_profile.get('low_social_support', 0)}
 
 Encounter History:
-- Diagnosis Group: {patient_profile['encounters'][-1]['diagnosis_group']}
+- Diagnosis Group: {diag}
 - Length of Stay: {patient_profile['encounters'][-1]['length_of_stay']} days
 - Encounter Type: {patient_profile['encounters'][-1]['encounter_type']}
 - Total Prior Encounters: {len(patient_profile['encounters']) - 1}
@@ -236,7 +237,14 @@ Risk Assessment:
 Memory/Longitudinal Context:
 {json.dumps(memory_context) if memory_context else "No prior history in CareAgent memory."}
 
-Provide concrete, actionable steps. Avoid generic medical advice. If they have SDOH flags, address them with specific resources (e.g. food delivery, housing navigators). Mention prior recommendations from memory and check if they need update or follow-up.
+Mandatory Clinical Instructions:
+1. You MUST include at least one disease-specific clinical recommendation tailored for the Diagnosis Group '{diag}':
+   - For Asthma: Provide Asthma Action Plan (Green/Yellow/Red zones), rescue inhaler & peak flow meter monitoring, and trigger avoidance counseling.
+   - For CHF: Enroll in CHF Care Pathway (daily weight logs, low-sodium diet, outpatient cardiology).
+   - For COPD: Confirm inhaler technique demonstration, verify home oxygen supplies.
+   - For Diabetes: Enroll in Diabetes self-management education, review glucometer logs & insulin regimen.
+2. Provide concrete, actionable clinical steps tailored to Care Management Level '{risk_analysis['care_management_level']}'.
+3. If they have SDOH flags, address them with specific resources (e.g. food delivery, housing navigators).
 """
 
     def _generate_rule_based(self, patient_profile, risk_analysis, memory_context):
