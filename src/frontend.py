@@ -380,22 +380,22 @@ if response_data:
                     (
                         "Housing Instability", 
                         "housing_instability", 
-                        "PRAPARE Question: 'In the past 12 months, have you worried about losing your housing, or lived in a shelter or temporary housing?'"
+                        "In the past 12 months, have you worried about losing your housing, or lived in a shelter or temporary housing?"
                     ),
                     (
                         "Food Insecurity", 
                         "food_insecurity", 
-                        "PRAPARE Question: 'In the past 12 months, did you worry whether your food would run out before you got money to buy more?'"
+                        "In the past 12 months, did you worry whether your food would run out before you got money to buy more?"
                     ),
                     (
                         "Transportation Barriers", 
                         "transportation_barrier", 
-                        "PRAPARE Question: 'In the past 12 months, has a lack of transportation kept you from medical appointments, meetings, or prescriptions?'"
+                        "In the past 12 months, has a lack of transportation kept you from medical appointments, meetings, or prescriptions?"
                     ),
                     (
                         "Low Social Support", 
                         "low_social_support", 
-                        "PRAPARE Question: 'How often do you feel you have someone you can count on to help you if you get sick or need assistance?'"
+                        "How often do you feel you have someone you can count on to help you if you get sick or need assistance?"
                     )
                 ]
                 
