@@ -479,68 +479,63 @@ if response_data:
                 def get_color(b):
                     return '#ff4b4b' if b == 'High' else '#ffa500' if b == 'Medium' else '#00e676'
                 
-                st.markdown(f"""
-<div class="glass-card">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h3 style="margin:0;">📊 CareAgent Readmission Risk Timeline</h3>
-        <span class="badge {care_class}">{care_level} Care Tier</span>
-    </div>
-    
-    <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:35px; align-items:start;">
-        <div>
-            <!-- 30-Day Risk -->
-            <div style="margin-bottom:12px;">
-                <div style="display:flex; justify-content:space-between; font-size:0.95rem; font-weight:600; margin-bottom:4px;">
-                    <span>30-Day Risk (Primary Deciding Factor)</span>
-                    <span style="color:{get_color(band_30)};">{prob_30:.1%} ({band_30})</span>
-                </div>
-                <div style="background:rgba(255,255,255,0.08); border-radius:8px; height:12px; overflow:hidden; border: 1px solid rgba(255,255,255,0.05);">
-                    <div style="background:{get_color(band_30)}; width:{prob_30:.1%}; height:100%;"></div>
-                </div>
-            </div>
-            
-            <!-- 60-Day Risk -->
-            <div style="margin-bottom:12px;">
-                <div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:500; opacity:0.9; margin-bottom:4px;">
-                    <span>60-Day Risk</span>
-                    <span style="color:{get_color(band_60)};">{prob_60:.1%} ({band_60})</span>
-                </div>
-                <div style="background:rgba(255,255,255,0.08); border-radius:8px; height:8px; overflow:hidden; border: 1px solid rgba(255,255,255,0.05);">
-                    <div style="background:{get_color(band_60)}; width:{prob_60:.1%}; height:100%;"></div>
-                </div>
-            </div>
-            
-            <!-- 90-Day Risk -->
-            <div style="margin-bottom:5px;">
-                <div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:500; opacity:0.9; margin-bottom:4px;">
-                    <span>90-Day Risk</span>
-                    <span style="color:{get_color(band_90)};">{prob_90:.1%} ({band_90})</span>
-                </div>
-                <div style="background:rgba(255,255,255,0.08); border-radius:8px; height:8px; overflow:hidden; border: 1px solid rgba(255,255,255,0.05);">
-                    <div style="background:{get_color(band_90)}; width:{prob_90:.1%}; height:100%;"></div>
-                </div>
-            </div>
-        </div>
-        
-        <div style="border-left:1px solid rgba(255,255,255,0.1); padding-left:30px;">
-            <p style="margin:0 0 10px 0; font-weight:600; font-size:1.05rem;">Key Risk Drivers:</p>
-""", unsafe_allow_html=True)
-                
+                # Construct Key Risk Drivers HTML block
                 drivers = recommendations.get("risk_drivers", [])
+                drivers_html = ""
                 if drivers:
                     for d in drivers:
-                        st.markdown(f"<li style='font-size:0.9rem; opacity:0.95;'>{d}</li>", unsafe_allow_html=True)
+                        drivers_html += f"<li style='font-size:0.9rem; opacity:0.95; margin-bottom:5px;'>{d}</li>"
                 else:
-                    st.markdown("<p style='font-size:0.9rem; opacity:0.7;'>No clinical risk drivers extracted yet. Click the discharge simulator to evaluate.</p>", unsafe_allow_html=True)
-                    
-                st.markdown(f"""
-        </div>
-    </div>
-    <p style="margin-top:20px; font-style:italic; font-size:0.95rem; line-height:1.5; opacity:0.85; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
-        <b>Clinical Rationale:</b> {recommendations.get('clinical_rationale', 'No rationale provided.')}
-    </p>
+                    drivers_html = "<p style='font-size:0.9rem; opacity:0.7; margin:0;'>No clinical risk drivers extracted yet. Click the discharge simulator to evaluate.</p>"
+                
+                # Compile complete HTML container for the timeline card
+                timeline_card_html = f"""<div class="glass-card">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+<h3 style="margin:0;">📊 CareAgent Readmission Risk Timeline</h3>
+<span class="badge {care_class}">{care_level} Care Tier</span>
 </div>
-""", unsafe_allow_html=True)
+<div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:35px; align-items:start;">
+<div>
+<div style="margin-bottom:12px;">
+<div style="display:flex; justify-content:space-between; font-size:0.95rem; font-weight:600; margin-bottom:4px;">
+<span>30-Day Risk (Primary Deciding Factor)</span>
+<span style="color:{get_color(band_30)};">{prob_30:.1%} ({band_30})</span>
+</div>
+<div style="background:rgba(255,255,255,0.08); border-radius:8px; height:12px; overflow:hidden; border: 1px solid rgba(255,255,255,0.05);">
+<div style="background:{get_color(band_30)}; width:{prob_30:.1%}; height:100%;"></div>
+</div>
+</div>
+<div style="margin-bottom:12px;">
+<div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:500; opacity:0.9; margin-bottom:4px;">
+<span>60-Day Risk</span>
+<span style="color:{get_color(band_60)};">{prob_60:.1%} ({band_60})</span>
+</div>
+<div style="background:rgba(255,255,255,0.08); border-radius:8px; height:8px; overflow:hidden; border: 1px solid rgba(255,255,255,0.05);">
+<div style="background:{get_color(band_60)}; width:{prob_60:.1%}; height:100%;"></div>
+</div>
+</div>
+<div style="margin-bottom:5px;">
+<div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:500; opacity:0.9; margin-bottom:4px;">
+<span>90-Day Risk</span>
+<span style="color:{get_color(band_90)};">{prob_90:.1%} ({band_90})</span>
+</div>
+<div style="background:rgba(255,255,255,0.08); border-radius:8px; height:8px; overflow:hidden; border: 1px solid rgba(255,255,255,0.05);">
+<div style="background:{get_color(band_90)}; width:{prob_90:.1%}; height:100%;"></div>
+</div>
+</div>
+</div>
+<div style="border-left:1px solid rgba(255,255,255,0.1); padding-left:30px; min-height:140px;">
+<p style="margin:0 0 10px 0; font-weight:600; font-size:1.05rem;">Key Risk Drivers:</p>
+<ul style="margin:0; padding-left:20px;">
+{drivers_html}
+</ul>
+</div>
+</div>
+<p style="margin-top:20px; font-style:italic; font-size:0.95rem; line-height:1.5; opacity:0.85; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
+<b>Clinical Rationale:</b> {recommendations.get('clinical_rationale', 'No rationale provided.')}
+</p>
+</div>"""
+                st.markdown(timeline_card_html, unsafe_allow_html=True)
                 
                 # Recommendations Checklists
                 st.markdown("<h3 style='margin-top:1.5rem;'>📝 Actionable Recommendations</h3>", unsafe_allow_html=True)
