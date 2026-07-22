@@ -143,26 +143,14 @@ def generate_synthetic_data(data_dir="data", num_patients=5000):
             if enc_type == "Inpatient":
                 p_readmit += 0.03
                 
-            # Cap readmission probability for 30 days
+            # Independent probabilities for the three windows
             p_readmit_30 = np.clip(p_readmit, 0.02, 0.85)
+            p_readmit_60 = np.clip(p_readmit * 0.5, 0.01, 0.40)
+            p_readmit_90 = np.clip(p_readmit * 0.3, 0.01, 0.25)
             
-            readmit_30 = np.random.binomial(1, p_readmit_30)
-            
-            # Cumulative risk logic for 60 and 90 days
-            if readmit_30 == 1:
-                readmit_60 = 1
-                readmit_90 = 1
-            else:
-                # Conditional probability for late readmission (days 31-60)
-                p_readmit_30_60 = np.clip(p_readmit * 0.5, 0.01, 0.40)
-                readmit_60 = int(np.random.binomial(1, p_readmit_30_60))
-                
-                if readmit_60 == 1:
-                    readmit_90 = 1
-                else:
-                    # Conditional probability for long-term readmission (days 61-90)
-                    p_readmit_60_90 = np.clip(p_readmit * 0.3, 0.01, 0.25)
-                    readmit_90 = int(np.random.binomial(1, p_readmit_60_90))
+            readmit_30 = int(np.random.binomial(1, p_readmit_30))
+            readmit_60 = int(np.random.binomial(1, p_readmit_60))
+            readmit_90 = int(np.random.binomial(1, p_readmit_90))
             
             encounters_list.append({
                 "encounter_id": encounter_id_counter,

@@ -168,10 +168,6 @@ class RiskModelTool:
             score_60 = float(self.model_60.predict_proba(input_features)[0][1]) if self.model_60 else score_30 + 0.12
             score_90 = float(self.model_90.predict_proba(input_features)[0][1]) if self.model_90 else score_60 + 0.08
             
-        # Enforce logical cumulative progression: 30 <= 60 <= 90
-        score_60 = max(score_60, score_30)
-        score_90 = max(score_90, score_60)
-            
         # Determine risk band (30-day primary)
         if score_30 < 0.15:
             risk_band = "Low"
@@ -242,7 +238,12 @@ class RecommendationTool:
         return self._generate_rule_based(patient_profile, risk_analysis, memory_context)
 
     def _build_prompt(self, patient_profile, risk_analysis, memory_context):
-        diag = patient_profile['encounters'][-1]['diagnosis_group']
+        # Extract all unique historical diagnoses
+        history_diags = list(set(e.get('diagnosis_group') for e in patient_profile.get('encounters', [])))
+        current_diag = patient_profile['encounters'][-1]['diagnosis_group']
+        if current_diag not in history_diags:
+            history_diags.append(current_diag)
+            
         return f"""
 You are CareAgent, an AI clinical coordinator. Your job is to generate highly personalized post-discharge recommendations and explain risk drivers for a patient.
 You must output a raw JSON object and nothing else. No markdown blocks, no leading/trailing conversational text.
@@ -269,7 +270,8 @@ Patient Profile:
   - Transportation Barrier: {patient_profile.get('transportation_barrier', 0)}
 
 Encounter History:
-- Diagnosis Group: {diag}
+- Diagnosis Group (Current): {current_diag}
+- All Historical Diagnoses: {', '.join(history_diags)}
 - Length of Stay: {patient_profile['encounters'][-1]['length_of_stay']} days
 - Encounter Type: {patient_profile['encounters'][-1]['encounter_type']}
 - Total Prior Encounters: {len(patient_profile['encounters']) - 1}
@@ -284,7 +286,7 @@ Memory/Longitudinal Context:
 {json.dumps(memory_context) if memory_context else "No prior history in CareAgent memory."}
 
 Mandatory Clinical Instructions:
-1. You MUST include at least one disease-specific clinical recommendation tailored for the Diagnosis Group '{diag}':
+1. You MUST include at least one disease-specific clinical recommendation tailored for EACH of the following active conditions diagnosed in the patient's history ({', '.join(history_diags)}):
    - For Asthma: Provide Asthma Action Plan (Green/Yellow/Red zones), rescue inhaler & peak flow meter monitoring, and trigger avoidance counseling.
    - For CHF: Enroll in CHF Care Pathway (daily weight logs, low-sodium diet, outpatient cardiology).
    - For COPD: Confirm inhaler technique demonstration, verify home oxygen supplies.
@@ -308,13 +310,17 @@ Mandatory Clinical Instructions:
         
         # Determine risk drivers
         prob = risk_analysis["readmit_probability"]
-        diag = patient_profile["encounters"][-1]["diagnosis_group"]
+        # Collect all unique historical diagnoses
+        history_diags = list(set(e.get('diagnosis_group') for e in patient_profile.get('encounters', [])))
+        current_diag = patient_profile["encounters"][-1]["diagnosis_group"]
+        if current_diag not in history_diags:
+            history_diags.append(current_diag)
         los = patient_profile["encounters"][-1]["length_of_stay"]
         
         if prob >= 0.35:
             drivers.append(f"Elevated baseline readmission probability ({prob:.1%})")
-        if diag in ["CHF", "COPD", "Diabetes", "Asthma", "Hypertension"]:
-            drivers.append(f"Active chronic disease management for {diag}")
+        for active_diag in history_diags:
+            drivers.append(f"Active chronic disease management for {active_diag}")
         if los > 5:
             drivers.append(f"Prolonged length of stay ({los} days) indicating clinical complexity")
             
@@ -341,17 +347,18 @@ Mandatory Clinical Instructions:
             clinical_recs.append("Schedule standard 14-day post-discharge PCP appointment.")
             clinical_recs.append("Provide patient with discharge self-care instructions and red flags checklist.")
             
-        # Diagnosis specific clinical recommendations
-        if diag == "CHF":
-            clinical_recs.append("Enroll in CHF Care Pathway: daily weight logs, low-sodium diet counseling, and outpatient cardiology review.")
-        elif diag == "COPD":
-            clinical_recs.append("Confirm inhaler technique demonstration completed. Ensure oxygen supplies (if active) are delivered to home.")
-        elif diag == "Diabetes":
-            clinical_recs.append("Enroll in outpatient Diabetes self-management education. Review glucometer logs and insulin administration regimen.")
-        elif diag == "Asthma":
-            clinical_recs.append("Provide Asthma Action Plan (Green/Yellow/Red zones). Confirm rescue inhaler access, trigger avoidance counseling, and peak flow meter monitoring.")
-        elif diag == "Hypertension":
-            clinical_recs.append("Enroll in Hypertension Pathway: daily blood pressure log, low-sodium DASH diet guidelines, and anti-hypertensive medication adherence counseling.")
+        # Diagnosis specific clinical recommendations for all active conditions in history
+        for active_diag in history_diags:
+            if active_diag == "CHF":
+                clinical_recs.append("Enroll in CHF Care Pathway: daily weight logs, low-sodium diet counseling, and outpatient cardiology review.")
+            elif active_diag == "COPD":
+                clinical_recs.append("Confirm inhaler technique demonstration completed. Ensure oxygen supplies (if active) are delivered to home.")
+            elif active_diag == "Diabetes":
+                clinical_recs.append("Enroll in outpatient Diabetes self-management education. Review glucometer logs and insulin administration regimen.")
+            elif active_diag == "Asthma":
+                clinical_recs.append("Provide Asthma Action Plan (Green/Yellow/Red zones). Confirm rescue inhaler access, trigger avoidance counseling, and peak flow meter monitoring.")
+            elif active_diag == "Hypertension":
+                clinical_recs.append("Enroll in Hypertension Pathway: daily blood pressure log, low-sodium DASH diet guidelines, and anti-hypertensive medication adherence counseling.")
             
         # SDOH interventions
         if patient_profile.get("housing_instability") == 1:
@@ -376,7 +383,7 @@ Mandatory Clinical Instructions:
         # Rationale narrative
         ins = patient_profile.get("insurance")
         age = patient_profile.get("age")
-        rationale = f"Patient is a {age}-year-old with {ins} coverage discharged after a {los}-day {diag} encounter. "
+        rationale = f"Patient is a {age}-year-old with {ins} coverage discharged after a {los}-day {current_diag} encounter. "
         if prob >= 0.35:
             rationale += f"Due to High readmission risk ({prob:.1%}) and a care level of {care_level}, "
         else:
