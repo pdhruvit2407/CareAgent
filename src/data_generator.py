@@ -53,11 +53,13 @@ def generate_synthetic_data(data_dir="data", num_patients=5000):
         else:
             insurances.append(np.random.choice(["Medicare", "Medicaid", "Commercial", "Uninsured"], p=[0.05, 0.30, 0.50, 0.15]))
             
-    # SDOH / HRSN binary flags (~20%, ~25%, ~15%, ~20% positive rates)
-    housing_instability = np.random.binomial(1, 0.20, size=num_patients)
-    food_insecurity = np.random.binomial(1, 0.25, size=num_patients)
-    transportation_barrier = np.random.binomial(1, 0.15, size=num_patients)
-    low_social_support = np.random.binomial(1, 0.20, size=num_patients)
+    # SDOH / HRSN binary flags (revised positive rates)
+    food_insecurity = np.random.binomial(1, 0.24, size=num_patients)
+    income_barrier = np.random.binomial(1, 0.30, size=num_patients)
+    housing_instability = np.random.binomial(1, 0.10, size=num_patients)
+    education_literacy_barrier = np.random.binomial(1, 0.23, size=num_patients)
+    low_social_support = np.random.binomial(1, 0.06, size=num_patients)
+    transportation_barrier = np.random.binomial(1, 0.07, size=num_patients)
     
     patients_df = pd.DataFrame({
         "patient_id": patient_ids,
@@ -65,19 +67,21 @@ def generate_synthetic_data(data_dir="data", num_patients=5000):
         "sex": sexes,
         "insurance": insurances,
         "language": languages,
-        "housing_instability": housing_instability,
         "food_insecurity": food_insecurity,
-        "transportation_barrier": transportation_barrier,
-        "low_social_support": low_social_support
+        "income_barrier": income_barrier,
+        "housing_instability": housing_instability,
+        "education_literacy_barrier": education_literacy_barrier,
+        "low_social_support": low_social_support,
+        "transportation_barrier": transportation_barrier
     })
     
     # 2. SDOH Table
-    sdoh_scores = housing_instability + food_insecurity + transportation_barrier + low_social_support
+    sdoh_scores = food_insecurity + income_barrier + housing_instability + education_literacy_barrier + low_social_support + transportation_barrier
     sdoh_risk_levels = []
     for score in sdoh_scores:
         if score == 0:
             sdoh_risk_levels.append("Low")
-        elif score <= 2:
+        elif score <= 3:
             sdoh_risk_levels.append("Moderate")
         else:
             sdoh_risk_levels.append("High")
@@ -93,8 +97,8 @@ def generate_synthetic_data(data_dir="data", num_patients=5000):
     encounter_id_counter = 100001
     
     # Diagnosis groups (Specific Chronic Disease Cohorts)
-    diag_groups = ["CHF", "COPD", "Diabetes", "Asthma"]
-    diag_probs = [0.25, 0.25, 0.25, 0.25]
+    diag_groups = ["CHF", "COPD", "Diabetes", "Asthma", "Hypertension"]
+    diag_probs = [0.20, 0.20, 0.20, 0.20, 0.20]
     
     for i in range(num_patients):
         p_id = patient_ids[i]
@@ -127,14 +131,14 @@ def generate_synthetic_data(data_dir="data", num_patients=5000):
             
             # Readmission probability formula
             # Base risk: 5%
-            # Chronic diagnosis: CHF/COPD/Diabetes/Asthma (+12%)
-            # SDOH score: +6% per flag (up to 24%)
+            # Chronic diagnosis: CHF/COPD/Diabetes/Asthma/Hypertension (+12%)
+            # SDOH score: +4% per flag (up to 24% for 6 flags)
             # Prior encounter count: +5% per prior encounter (capped influence)
             # Inpatient encounter has slightly higher risk of readmission: +3%
             p_readmit = 0.05
-            if diag in ["CHF", "COPD", "Diabetes", "Asthma"]:
+            if diag in ["CHF", "COPD", "Diabetes", "Asthma", "Hypertension"]:
                 p_readmit += 0.12
-            p_readmit += sdoh_score * 0.06
+            p_readmit += sdoh_score * 0.04
             p_readmit += min(prior_encounters * 0.05, 0.25)
             if enc_type == "Inpatient":
                 p_readmit += 0.03

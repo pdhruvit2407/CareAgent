@@ -109,9 +109,9 @@ class RiskModelTool:
         if self.model is None:
             # Simple rule-based score calculation
             score = 0.05
-            if encounter.get("diagnosis_group") in ["CHF", "COPD", "Diabetes", "Asthma"]:
+            if encounter.get("diagnosis_group") in ["CHF", "COPD", "Diabetes", "Asthma", "Hypertension"]:
                 score += 0.15
-            score += patient_profile.get("sdoh_score", 0) * 0.08
+            score += patient_profile.get("sdoh_score", 0) * 0.05
             score += min(len(patient_profile.get("encounters", [])) * 0.05, 0.25)
             score = np.clip(score, 0.02, 0.85)
         else:
@@ -119,9 +119,9 @@ class RiskModelTool:
             # Reconstruct variables as they were in encounters + patients join
             row_dict = {}
             # Demo / Patient fields
-            for col in ["age", "sex", "insurance", "language", "housing_instability", 
-                        "food_insecurity", "transportation_barrier", "low_social_support", 
-                        "sdoh_score", "sdoh_risk_level"]:
+            for col in ["age", "sex", "insurance", "language", "food_insecurity", "income_barrier", 
+                        "housing_instability", "education_literacy_barrier", "low_social_support", 
+                        "transportation_barrier", "sdoh_score", "sdoh_risk_level"]:
                 row_dict[col] = patient_profile.get(col)
                 
             # Encounter fields
@@ -238,10 +238,12 @@ Patient Profile:
 - Insurance: {patient_profile['insurance']}
 - Language: {patient_profile['language']}
 - SDOH Flags:
-  - Housing Instability: {patient_profile.get('housing_instability', 0)}
   - Food Insecurity: {patient_profile.get('food_insecurity', 0)}
-  - Transportation Barrier: {patient_profile.get('transportation_barrier', 0)}
+  - Income Barrier: {patient_profile.get('income_barrier', 0)}
+  - Housing Instability: {patient_profile.get('housing_instability', 0)}
+  - Education/Literacy Barrier: {patient_profile.get('education_literacy_barrier', 0)}
   - Low Social Support: {patient_profile.get('low_social_support', 0)}
+  - Transportation Barrier: {patient_profile.get('transportation_barrier', 0)}
 
 Encounter History:
 - Diagnosis Group: {diag}
@@ -262,8 +264,15 @@ Mandatory Clinical Instructions:
    - For CHF: Enroll in CHF Care Pathway (daily weight logs, low-sodium diet, outpatient cardiology).
    - For COPD: Confirm inhaler technique demonstration, verify home oxygen supplies.
    - For Diabetes: Enroll in Diabetes self-management education, review glucometer logs & insulin regimen.
+   - For Hypertension: Provide Hypertension protocol (daily blood pressure log, sodium limits counseling, DASH diet guidelines, and anti-hypertensive medication review).
 2. Provide concrete, actionable clinical steps tailored to Care Management Level '{risk_analysis['care_management_level']}'.
-3. If they have SDOH flags, address them with specific resources (e.g. food delivery, housing navigators).
+3. If they have SDOH flags, address them with specific resources:
+   - Food Insecurity: Medically Tailored Meals (MTM) and food bank coordination.
+   - Income Barrier: Case Management financial counseling, co-pay assistance programs, and utility subsidy programs.
+   - Housing Instability: Medical-Legal Partnership & housing navigation services.
+   - Education/Literacy: Visual aid checklists, low-literacy translated booklets.
+   - Low Social Support: Community Health Worker (CHW) visits, community peer groups.
+   - Transportation: Medical transit rideshare services.
 """
 
     def _generate_rule_based(self, patient_profile, risk_analysis, memory_context):
@@ -279,7 +288,7 @@ Mandatory Clinical Instructions:
         
         if prob >= 0.35:
             drivers.append(f"Elevated baseline readmission probability ({prob:.1%})")
-        if diag in ["CHF", "COPD", "Diabetes", "Asthma"]:
+        if diag in ["CHF", "COPD", "Diabetes", "Asthma", "Hypertension"]:
             drivers.append(f"Active chronic disease management for {diag}")
         if los > 5:
             drivers.append(f"Prolonged length of stay ({los} days) indicating clinical complexity")
@@ -291,7 +300,7 @@ Mandatory Clinical Instructions:
         # Demographics and SDOH drivers
         sdoh_score = patient_profile.get("sdoh_score", 0)
         if sdoh_score > 0:
-            drivers.append(f"Compounded SDOH burden (Score: {sdoh_score}/4)")
+            drivers.append(f"Compounded SDOH burden (Score: {sdoh_score}/6)")
             
         # Generate Clinical Recs based on Care Level and diagnosis
         care_level = risk_analysis["care_management_level"]
@@ -316,6 +325,8 @@ Mandatory Clinical Instructions:
             clinical_recs.append("Enroll in outpatient Diabetes self-management education. Review glucometer logs and insulin administration regimen.")
         elif diag == "Asthma":
             clinical_recs.append("Provide Asthma Action Plan (Green/Yellow/Red zones). Confirm rescue inhaler access, trigger avoidance counseling, and peak flow meter monitoring.")
+        elif diag == "Hypertension":
+            clinical_recs.append("Enroll in Hypertension Pathway: daily blood pressure log, low-sodium DASH diet guidelines, and anti-hypertensive medication adherence counseling.")
             
         # SDOH interventions
         if patient_profile.get("housing_instability") == 1:
@@ -324,6 +335,12 @@ Mandatory Clinical Instructions:
         if patient_profile.get("food_insecurity") == 1:
             sdoh_recs.append("Enroll in Medically Tailored Meals (MTM) program and coordinate local food bank delivery.")
             drivers.append("Food insecurity compromises nutritional compliance and medication safety")
+        if patient_profile.get("income_barrier") == 1:
+            sdoh_recs.append("Refer to Case Management & financial counseling; enroll in co-pay assistance and utility subsidy programs.")
+            drivers.append("Income barrier / financial strain compromises medication and basic needs access")
+        if patient_profile.get("education_literacy_barrier") == 1:
+            sdoh_recs.append("Provide low-literacy clinical materials; schedule direct patient education sessions with visual aid checklists.")
+            drivers.append("Education & literacy barrier creates risk of medication and self-care instruction misunderstanding")
         if patient_profile.get("transportation_barrier") == 1:
             sdoh_recs.append("Coordinate medical transit rideshare services for all scheduled post-discharge appointments.")
             drivers.append("Transportation barrier raises clinic appointment no-show risks")

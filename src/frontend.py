@@ -391,31 +391,40 @@ if response_data:
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                         <h3 style="margin:0;">🧩 Social Barriers (SDOH)</h3>
                         <span class="badge {sdoh_class}">{sdoh_lvl} Risk</span>
-                    </div>
-                    <p style="font-size:0.9rem; opacity:0.8; margin-bottom:15px;">SDOH Score: <b>{sdoh_score} out of 4</b> barriers flagged.</p>
+                     <p style="font-size:0.9rem; opacity:0.8; margin-bottom:15px;">SDOH Score: <b>{sdoh_score} out of 6</b> barriers flagged.</p>
                 """, unsafe_allow_html=True)
                 
-                # Render individual flags with screening question hover tooltips
+                # Render individual flags with screening question hover tooltips (all 6 categories)
                 flags = [
-                    (
-                        "Housing Instability", 
-                        "housing_instability", 
-                        "In the past 12 months, have you worried about losing your housing, or lived in a shelter or temporary housing?"
-                    ),
                     (
                         "Food Insecurity", 
                         "food_insecurity", 
                         "In the past 12 months, did you worry whether your food would run out before you got money to buy more?"
                     ),
                     (
+                        "Income / Financial Strain", 
+                        "income_barrier", 
+                        "Do you experience difficulty paying for basic necessities like medicine, housing, or food at the end of the month?"
+                    ),
+                    (
+                        "Housing Instability", 
+                        "housing_instability", 
+                        "In the past 12 months, have you worried about losing your housing, or lived in a shelter or temporary housing?"
+                    ),
+                    (
+                        "Education & Literacy", 
+                        "education_literacy_barrier", 
+                        "Do you ever need help reading or understanding medical instructions or pamphlets given by doctors?"
+                    ),
+                    (
+                        "Social Isolation", 
+                        "low_social_support", 
+                        "How often do you feel you have someone you can count on to help you if you get sick or need assistance?"
+                    ),
+                    (
                         "Transportation Barriers", 
                         "transportation_barrier", 
                         "In the past 12 months, has a lack of transportation kept you from medical appointments, meetings, or prescriptions?"
-                    ),
-                    (
-                        "Low Social Support", 
-                        "low_social_support", 
-                        "How often do you feel you have someone you can count on to help you if you get sick or need assistance?"
                     )
                 ]
                 

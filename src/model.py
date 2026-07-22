@@ -44,7 +44,7 @@ def train_baseline_model(data_dir="data", model_dir="src"):
     # Features & Target definition
     categorical_cols = ["sex", "insurance", "language", "encounter_type", "diagnosis_group", "sdoh_risk_level"]
     numerical_cols = ["age", "length_of_stay", "prior_encounters", "prior_ed", "prior_inpatient", "sdoh_score"]
-    sdoh_flags = ["housing_instability", "food_insecurity", "transportation_barrier", "low_social_support"]
+    sdoh_flags = ["food_insecurity", "income_barrier", "housing_instability", "education_literacy_barrier", "low_social_support", "transportation_barrier"]
     
     feature_cols = categorical_cols + numerical_cols + sdoh_flags
     target_col = "readmit_30"
