@@ -65,43 +65,57 @@ def train_baseline_model(data_dir="data", model_dir="src"):
     test_df = df_encoded[df_encoded["patient_id"].isin(test_patients)]
     
     X_train = train_df[feature_cols]
-    y_train = train_df[target_col]
     X_test = test_df[feature_cols]
-    y_test = test_df[target_col]
+    
+    y_train_30 = train_df["readmit_30"]
+    y_train_60 = train_df["readmit_60"]
+    y_train_90 = train_df["readmit_90"]
+    
+    y_test_30 = test_df["readmit_30"]
+    y_test_60 = test_df["readmit_60"]
+    y_test_90 = test_df["readmit_90"]
     
     print(f"Training set size: {len(X_train)} encounters")
     print(f"Testing set size: {len(X_test)} encounters")
     
-    # Train Random Forest Classifier
-    rf_model = RandomForestClassifier(n_estimators=100, max_depth=8, random_state=42)
-    rf_model.fit(X_train, y_train)
+    # Train Random Forest Classifiers for each horizon
+    print("Training 30-Day Risk Model...")
+    rf_30 = RandomForestClassifier(n_estimators=100, max_depth=8, random_state=42)
+    rf_30.fit(X_train, y_train_30)
     
-    # Predictions
-    y_pred = rf_model.predict(X_test)
-    y_prob = rf_model.predict_proba(X_test)[:, 1]
+    print("Training 60-Day Risk Model...")
+    rf_60 = RandomForestClassifier(n_estimators=100, max_depth=8, random_state=42)
+    rf_60.fit(X_train, y_train_60)
     
-    # Evaluation
-    accuracy = accuracy_score(y_test, y_pred)
-    roc_auc = roc_auc_score(y_test, y_prob)
+    print("Training 90-Day Risk Model...")
+    rf_90 = RandomForestClassifier(n_estimators=100, max_depth=8, random_state=42)
+    rf_90.fit(X_train, y_train_90)
+    
+    # Predictions and Evaluation for 30-day
+    y_pred_30 = rf_30.predict(X_test)
+    y_prob_30 = rf_30.predict_proba(X_test)[:, 1]
+    accuracy_30 = accuracy_score(y_test_30, y_pred_30)
+    roc_auc_30 = roc_auc_score(y_test_30, y_prob_30)
+    
+    # 60-day
+    y_prob_60 = rf_60.predict_proba(X_test)[:, 1]
+    roc_auc_60 = roc_auc_score(y_test_60, y_prob_60)
+    
+    # 90-day
+    y_prob_90 = rf_90.predict_proba(X_test)[:, 1]
+    roc_auc_90 = roc_auc_score(y_test_90, y_prob_90)
     
     print("\n--- MODEL PERFORMANCE ---")
-    print(f"Accuracy: {accuracy:.4f}")
-    print(f"ROC-AUC Score: {roc_auc:.4f}")
-    print("\nConfusion Matrix:")
-    print(confusion_matrix(y_test, y_pred))
-    print("\nClassification Report:")
-    print(classification_report(y_test, y_pred))
+    print(f"30-Day Model - Accuracy: {accuracy_30:.4f}, ROC-AUC: {roc_auc_30:.4f}")
+    print(f"60-Day Model - ROC-AUC: {roc_auc_60:.4f}")
+    print(f"90-Day Model - ROC-AUC: {roc_auc_90:.4f}")
     
-    # Feature Importance
-    importances = rf_model.feature_importances_
-    indices = np.argsort(importances)[::-1]
-    print("\nFeature Importances:")
-    for f in range(X_train.shape[1]):
-        print(f"{f + 1}. {feature_cols[indices[f]]}: {importances[indices[f]]:.4f}")
-        
     # Save artifacts
     artifacts = {
-        "model": rf_model,
+        "model": rf_30, # Backward compatibility
+        "model_30": rf_30,
+        "model_60": rf_60,
+        "model_90": rf_90,
         "encoders": encoders,
         "feature_cols": feature_cols,
         "categorical_cols": categorical_cols,

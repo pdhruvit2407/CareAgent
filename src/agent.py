@@ -95,12 +95,17 @@ class RiskModelTool:
         if os.path.exists(self.model_path):
             with open(self.model_path, "rb") as f:
                 artifacts = pickle.load(f)
-            self.model = artifacts["model"]
             self.encoders = artifacts["encoders"]
             self.feature_cols = artifacts["feature_cols"]
             self.categorical_cols = artifacts["categorical_cols"]
             self.numerical_cols = artifacts["numerical_cols"]
             self.sdoh_flags = artifacts["sdoh_flags"]
+            
+            # Load the multi-horizon risk models
+            self.model_30 = artifacts.get("model_30", artifacts.get("model"))
+            self.model_60 = artifacts.get("model_60")
+            self.model_90 = artifacts.get("model_90")
+            self.model = self.model_30
         else:
             print(f"Warning: Model artifacts not found at {self.model_path}. Risk score will use fallback rules.")
 
@@ -108,12 +113,15 @@ class RiskModelTool:
         # Fallback if model is not loaded
         if self.model is None:
             # Simple rule-based score calculation
-            score = 0.05
+            score_30 = 0.05
             if encounter.get("diagnosis_group") in ["CHF", "COPD", "Diabetes", "Asthma", "Hypertension"]:
-                score += 0.15
-            score += patient_profile.get("sdoh_score", 0) * 0.05
-            score += min(len(patient_profile.get("encounters", [])) * 0.05, 0.25)
-            score = np.clip(score, 0.02, 0.85)
+                score_30 += 0.15
+            score_30 += patient_profile.get("sdoh_score", 0) * 0.05
+            score_30 += min(len(patient_profile.get("encounters", [])) * 0.05, 0.25)
+            score_30 = np.clip(score_30, 0.02, 0.85)
+            
+            score_60 = np.clip(score_30 + 0.12, 0.02, 0.90)
+            score_90 = np.clip(score_60 + 0.08, 0.02, 0.95)
         else:
             # Prepare feature vector
             # Reconstruct variables as they were in encounters + patients join
@@ -155,29 +163,44 @@ class RiskModelTool:
             # Standardize columns ordering
             input_features = input_df[self.feature_cols]
             
-            # Predict
-            score = float(self.model.predict_proba(input_features)[0][1])
+            # Predict scores for 30, 60, and 90 days
+            score_30 = float(self.model_30.predict_proba(input_features)[0][1])
+            score_60 = float(self.model_60.predict_proba(input_features)[0][1]) if self.model_60 else score_30 + 0.12
+            score_90 = float(self.model_90.predict_proba(input_features)[0][1]) if self.model_90 else score_60 + 0.08
             
-        # Determine risk band
-        if score < 0.15:
+        # Enforce logical cumulative progression: 30 <= 60 <= 90
+        score_60 = max(score_60, score_30)
+        score_90 = max(score_90, score_60)
+            
+        # Determine risk band (30-day primary)
+        if score_30 < 0.15:
             risk_band = "Low"
-        elif score < 0.35:
+        elif score_30 < 0.35:
             risk_band = "Medium"
         else:
             risk_band = "High"
             
-        # Determine Care Management Level (Rule-based combining score + SDOH)
+        def get_risk_band(s):
+            if s < 0.15: return "Low"
+            if s < 0.35: return "Medium"
+            return "High"
+            
+        # Determine Care Management Level (Rule-based combining 30-day score + SDOH)
         sdoh_val = patient_profile.get("sdoh_score", 0)
-        if score > 0.40 or (score > 0.25 and sdoh_val >= 3):
+        if score_30 > 0.40 or (score_30 > 0.25 and sdoh_val >= 3):
             care_level = "Intensive"
-        elif score > 0.20 or sdoh_val >= 1:
+        elif score_30 > 0.20 or sdoh_val >= 1:
             care_level = "Enhanced"
         else:
             care_level = "Routine"
             
         return {
-            "readmit_probability": score,
+            "readmit_probability": score_30,
             "readmit_risk_band": risk_band,
+            "readmit_probability_60": score_60,
+            "readmit_risk_band_60": get_risk_band(score_60),
+            "readmit_probability_90": score_90,
+            "readmit_risk_band_90": get_risk_band(score_90),
             "care_management_level": care_level
         }
 
@@ -253,6 +276,8 @@ Encounter History:
 
 Risk Assessment:
 - Predicted 30-Day Readmission Risk: {risk_analysis['readmit_probability']:.2%} (Band: {risk_analysis['readmit_risk_band']})
+- Predicted 60-Day Readmission Risk: {risk_analysis.get('readmit_probability_60', risk_analysis['readmit_probability'] + 0.12):.2%} (Band: {risk_analysis.get('readmit_risk_band_60', 'Medium')})
+- Predicted 90-Day Readmission Risk: {risk_analysis.get('readmit_probability_90', risk_analysis['readmit_probability'] + 0.20):.2%} (Band: {risk_analysis.get('readmit_risk_band_90', 'High')})
 - Care Management Level: {risk_analysis['care_management_level']}
 
 Memory/Longitudinal Context:

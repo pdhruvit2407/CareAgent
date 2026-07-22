@@ -464,30 +464,66 @@ if response_data:
                 st.markdown("</div>", unsafe_allow_html=True)
 
             with right_col:
-                # Risk & Care Level Summary Card
-                prob = risk_results.get("readmit_probability", 0.0)
-                band = risk_results.get("readmit_risk_band", "Low")
-                care_level = risk_results.get("care_management_level", "Routine")
+                # Horizons values
+                prob_30 = risk_results.get("readmit_probability", 0.0)
+                band_30 = risk_results.get("readmit_risk_band", "Low")
+                prob_60 = risk_results.get("readmit_probability_60", prob_30 + 0.12)
+                band_60 = risk_results.get("readmit_risk_band_60", "Medium")
+                prob_90 = risk_results.get("readmit_probability_90", prob_60 + 0.08)
+                band_90 = risk_results.get("readmit_risk_band_90", "High")
                 
-                band_class = "badge-high" if band == "High" else ("badge-medium" if band == "Medium" else "badge-low")
+                care_level = risk_results.get("care_management_level", "Routine")
                 care_class = "badge-intensive" if care_level == "Intensive" else ("badge-enhanced" if care_level == "Enhanced" else "badge-routine")
+                
+                # Colors based on band
+                def get_color(b):
+                    return '#ff4b4b' if b == 'High' else '#ffa500' if b == 'Medium' else '#00e676'
                 
                 st.markdown(f"""
                 <div class="glass-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h3 style="margin:0;">📊 CareAgent Readmission Analysis</h3>
-                        <div>
-                            <span class="badge {band_class}" style="margin-right:8px;">{band} Risk</span>
-                            <span class="badge {care_class}">{care_level} Care</span>
-                        </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3 style="margin:0;">📊 CareAgent Readmission Risk Timeline</h3>
+                        <span class="badge {care_class}">{care_level} Care Tier</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:30px;">
-                        <div style="text-align:center;">
-                            <div style="font-size:3rem; font-weight:700; color:{'#ff4b4b' if band=='High' else '#ffa500' if band=='Medium' else '#00e676'};">{prob:.1%}</div>
-                            <div style="font-size:0.8rem; text-transform:uppercase; opacity:0.7;">30-Day Probability</div>
+                    
+                    <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:35px; align-items:start;">
+                        <div>
+                            <!-- 30-Day Risk -->
+                            <div style="margin-bottom:12px;">
+                                <div style="display:flex; justify-content:space-between; font-size:0.95rem; font-weight:600; margin-bottom:4px;">
+                                    <span>30-Day Risk (Primary Deciding Factor)</span>
+                                    <span style="color:{get_color(band_30)};">{prob_30:.1%} ({band_30})</span>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.08); border-radius:8px; height:12px; overflow:hidden; border: 1px solid rgba(255,255,255,0.05);">
+                                    <div style="background:{get_color(band_30)}; width:{prob_30 * 100:.1%}%; height:100%;"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- 60-Day Risk -->
+                            <div style="margin-bottom:12px;">
+                                <div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:500; opacity:0.9; margin-bottom:4px;">
+                                    <span>60-Day Risk</span>
+                                    <span style="color:{get_color(band_60)};">{prob_60:.1%} ({band_60})</span>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.08); border-radius:8px; height:8px; overflow:hidden; border: 1px solid rgba(255,255,255,0.05);">
+                                    <div style="background:{get_color(band_60)}; width:{prob_60 * 100:.1%}%; height:100%;"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- 90-Day Risk -->
+                            <div style="margin-bottom:5px;">
+                                <div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:500; opacity:0.9; margin-bottom:4px;">
+                                    <span>90-Day Risk</span>
+                                    <span style="color:{get_color(band_90)};">{prob_90:.1%} ({band_90})</span>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.08); border-radius:8px; height:8px; overflow:hidden; border: 1px solid rgba(255,255,255,0.05);">
+                                    <div style="background:{get_color(band_90)}; width:{prob_90 * 100:.1%}%; height:100%;"></div>
+                                </div>
+                            </div>
                         </div>
+                        
                         <div style="border-left:1px solid rgba(255,255,255,0.1); padding-left:30px;">
-                            <p style="margin:0 0 5px 0; font-weight:600; font-size:1.05rem;">Key Risk Drivers:</p>
+                            <p style="margin:0 0 10px 0; font-weight:600; font-size:1.05rem;">Key Risk Drivers:</p>
                 """, unsafe_allow_html=True)
                 
                 drivers = recommendations.get("risk_drivers", [])
