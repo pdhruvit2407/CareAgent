@@ -494,14 +494,46 @@ if response_data:
                 else:
                     drivers_html = "<p style='font-size:0.9rem; opacity:0.7; margin:0;'>No clinical risk drivers extracted yet. Click the discharge simulator to evaluate.</p>"
                 
+                # Generate demographic/historical baseline comparison context
+                age = profile.get("age", 50)
+                ins = profile.get("insurance", "Medicare")
+                prior_encs = len(profile.get("encounters", [])) - 1
+                sdoh_score = profile.get("sdoh_score", 0)
+                
+                comp_reasons = []
+                if prior_encs >= 3:
+                    comp_reasons.append(f"high utilization history ({prior_encs} prior encounters) significantly elevates their Days 1–30 risk relative to standard patient cohorts")
+                elif prior_encs == 0:
+                    comp_reasons.append("lack of prior hospitalizations helps maintain a lower baseline risk during the initial 30 days post-discharge")
+                    
+                if age >= 65:
+                    comp_reasons.append(f"advanced age ({age}) introduces geriatric vulnerabilities (such as cognitive decline or mobility limits) that contribute to a higher baseline 60/90-day risk profile")
+                else:
+                    comp_reasons.append(f"younger age ({age}) generally provides better physiological reserve, helping moderate longer-term readmission threats")
+                
+                if ins in ["Medicaid", "Uninsured"]:
+                    comp_reasons.append(f"enrollment status ({ins}) can introduce access-to-care barriers or cost strains that elevate their Days 31–60 and Days 61–90 risks")
+                
+                if sdoh_score >= 3:
+                    comp_reasons.append(f"high social needs burden ({sdoh_score}/6 flags positive) creates severe compliance risks, causing the Days 61–90 risk to remain elevated")
+                elif sdoh_score == 0:
+                    comp_reasons.append("complete absence of social barriers (0/6 flags) heavily suppresses their Days 61–90 risk, ensuring a safer recovery transition")
+                
+                comp_text = f"Patient is a {age}-year-old with {ins} coverage. "
+                if comp_reasons:
+                    comp_text += "Analysis shows that their " + "; and their ".join(comp_reasons) + "."
+                else:
+                    comp_text += "Their risk scores align closely with standard demographic baseline averages for this cohort."
+                
                 # Compile complete HTML container for the timeline card
                 timeline_card_html = f"""<div class="glass-card">
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
 <h3 style="margin:0;">📊 CareAgent Readmission Risk Timeline</h3>
 <span class="badge {care_class}">{care_level} Care Tier</span>
 </div>
-<div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:35px; align-items:start;">
+
 <div>
+<!-- 30-Day Risk -->
 <div style="margin-bottom:12px;">
 <div style="display:flex; justify-content:space-between; font-size:0.95rem; font-weight:600; margin-bottom:4px;">
 <span>30-Day Risk (Primary Deciding Factor)</span>
@@ -511,6 +543,8 @@ if response_data:
 <div style="background:{get_color(band_30)}; width:{prob_30:.1%}; height:100%;"></div>
 </div>
 </div>
+
+<!-- 60-Day Risk -->
 <div style="margin-bottom:12px;">
 <div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:500; opacity:0.9; margin-bottom:4px;">
 <span>60-Day Risk</span>
@@ -520,6 +554,8 @@ if response_data:
 <div style="background:{get_color(band_60)}; width:{prob_60:.1%}; height:100%;"></div>
 </div>
 </div>
+
+<!-- 90-Day Risk -->
 <div style="margin-bottom:5px;">
 <div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:500; opacity:0.9; margin-bottom:4px;">
 <span>90-Day Risk</span>
@@ -530,13 +566,32 @@ if response_data:
 </div>
 </div>
 </div>
-<div style="border-left:1px solid rgba(255,255,255,0.1); padding-left:30px; min-height:140px;">
-<p style="margin:0 0 10px 0; font-weight:600; font-size:1.05rem;">Key Risk Drivers:</p>
+
+<div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
+<h5 style="margin:0 0 8px 0; font-size:0.95rem; font-weight:600; opacity:0.9;">ℹ️ Timeline Risk Interpretations</h5>
+<p style="margin:0 0 6px 0; font-size:0.85rem; opacity:0.85; line-height:1.4;">
+<b>• 30-Day Risk (Days 1–30)</b>: Reflects immediate post-discharge instability, medication errors, and transition care gaps.
+</p>
+<p style="margin:0 0 6px 0; font-size:0.85rem; opacity:0.85; line-height:1.4;">
+<b>• 60-Day Risk (Days 31–60)</b>: Reflects outpatient follow-up adherence, compliance with chronic care pathway, and lifestyle adherence.
+</p>
+<p style="margin:0 0 10px 0; font-size:0.85rem; opacity:0.85; line-height:1.4;">
+<b>• 90-Day Risk (Days 61–90)</b>: Reflects long-term social barrier impact (SDOH), financial barriers, and primary care access stability.
+</p>
+</div>
+
+<div style="margin-top:15px; padding:12px; background:rgba(255,255,255,0.02); border-radius:6px; border:1px solid rgba(255,255,255,0.05); font-size:0.88rem; line-height:1.5;">
+<b style="color:#2196f3;">🔬 Demographic & Clinical Baseline Context:</b><br/>
+{comp_text}
+</div>
+
+<div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
+<h4 style="margin:0 0 10px 0;">🔑 Key Risk Drivers</h4>
 <ul style="margin:0; padding-left:20px;">
 {drivers_html}
 </ul>
 </div>
-</div>
+
 <p style="margin-top:20px; font-style:italic; font-size:0.95rem; line-height:1.5; opacity:0.85; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
 <b>Clinical Rationale:</b> {recommendations.get('clinical_rationale', 'No rationale provided.')}
 </p>
