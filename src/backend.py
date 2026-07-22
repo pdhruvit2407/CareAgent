@@ -101,6 +101,7 @@ def get_patients(
     risk_band: Optional[str] = Query(None, description="Filter by risk band (Low, Medium, High)"),
     care_level: Optional[str] = Query(None, description="Filter by care level (Routine, Enhanced, Intensive)"),
     sdoh_risk: Optional[str] = Query(None, description="Filter by SDOH risk level (Low, Moderate, High)"),
+    diagnosis: Optional[str] = Query(None, description="Filter by latest diagnosis group"),
     search: Optional[str] = Query(None, description="Search by Patient ID"),
     monitored: Optional[bool] = Query(None, description="Filter by monitored status"),
     limit: int = 100,
@@ -110,12 +111,17 @@ def get_patients(
         # Load patients and their current evaluation status
         patients_df = orchestrator.data_tool.patients_df
         sdoh_df = orchestrator.data_tool.sdoh_df
+        encounters_df = orchestrator.data_tool.encounters_df
         
-        if patients_df is None or sdoh_df is None:
+        if patients_df is None or sdoh_df is None or encounters_df is None:
             raise HTTPException(status_code=500, detail="Data files not loaded. Please run data generator.")
             
-        # Join patients with SDOH
+        # Get latest encounter diagnosis group for each patient
+        latest_encs = encounters_df.sort_values("admit_day").groupby("patient_id").last()[["diagnosis_group"]].reset_index()
+        
+        # Join patients with SDOH and latest encounters
         df = patients_df.merge(sdoh_df, on="patient_id", how="left")
+        df = df.merge(latest_encs, on="patient_id", how="left")
         
         # Fetch all patient histories in a single batch read from Firestore to prevent 5000+ sequential queries
         db_docs = {}
@@ -166,6 +172,8 @@ def get_patients(
                 continue
             if sdoh_risk and row["sdoh_risk_level"] != sdoh_risk:
                 continue
+            if diagnosis and row["diagnosis_group"] != diagnosis:
+                continue
             if search and str(p_id) != search.strip():
                 continue
                 
@@ -179,7 +187,8 @@ def get_patients(
                 "sdoh_risk_level": row["sdoh_risk_level"],
                 "readmit_probability": prob,
                 "readmit_risk_band": band,
-                "care_management_level": care
+                "care_management_level": care,
+                "diagnosis_group": str(row["diagnosis_group"])
             })
             
         # Paginate results

@@ -251,6 +251,8 @@ if "filter_care" not in st.session_state:
     st.session_state.filter_care = "All"
 if "filter_sdoh" not in st.session_state:
     st.session_state.filter_sdoh = "All"
+if "filter_diag" not in st.session_state:
+    st.session_state.filter_diag = "All"
 if "filter_search" not in st.session_state:
     st.session_state.filter_search = ""
 if "filter_monitored" not in st.session_state:
@@ -259,6 +261,7 @@ if "filter_monitored" not in st.session_state:
 risk_filter = st.sidebar.selectbox("Readmission Risk Band", ["All", "High", "Medium", "Low"], key="filter_risk")
 care_filter = st.sidebar.selectbox("Care Management Level", ["All", "Intensive", "Enhanced", "Routine"], key="filter_care")
 sdoh_filter = st.sidebar.selectbox("SDOH Risk Level", ["All", "High", "Moderate", "Low"], key="filter_sdoh")
+diag_filter = st.sidebar.selectbox("Diagnosis Cohort", ["All", "CHF", "COPD", "Diabetes", "Asthma", "Hypertension"], key="filter_diag")
 search_id = st.sidebar.text_input("Search Patient ID", key="filter_search")
 monitored_filter = st.sidebar.checkbox("⭐ Monitored Patients Only", key="filter_monitored")
 
@@ -266,6 +269,7 @@ def reset_filters():
     st.session_state.filter_risk = "All"
     st.session_state.filter_care = "All"
     st.session_state.filter_sdoh = "All"
+    st.session_state.filter_diag = "All"
     st.session_state.filter_search = ""
     st.session_state.filter_monitored = False
 
@@ -279,6 +283,8 @@ if care_filter != "All":
     params["care_level"] = care_filter
 if sdoh_filter != "All":
     params["sdoh_risk"] = sdoh_filter
+if diag_filter != "All":
+    params["diagnosis"] = diag_filter
 if search_id.strip():
     params["search"] = search_id.strip()
 if monitored_filter:
