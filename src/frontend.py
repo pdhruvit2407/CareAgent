@@ -534,9 +534,9 @@ if response_data:
 
 <div>
 <!-- 30-Day Risk -->
-<div style="margin-bottom:12px;">
+<div style="margin-bottom:12px; cursor:help;" title="30-Day Risk (Days 1–30): Reflects immediate post-discharge instability, medication errors, and transition care gaps.">
 <div style="display:flex; justify-content:space-between; font-size:0.95rem; font-weight:600; margin-bottom:4px;">
-<span>30-Day Risk (Primary Deciding Factor)</span>
+<span>30-Day Risk (Primary Deciding Factor) ℹ️</span>
 <span style="color:{get_color(band_30)};">{prob_30:.1%} ({band_30})</span>
 </div>
 <div style="background:rgba(255,255,255,0.08); border-radius:8px; height:12px; overflow:hidden; border: 1px solid rgba(255,255,255,0.05);">
@@ -545,9 +545,9 @@ if response_data:
 </div>
 
 <!-- 60-Day Risk -->
-<div style="margin-bottom:12px;">
+<div style="margin-bottom:12px; cursor:help;" title="60-Day Risk (Days 31–60): Reflects outpatient follow-up adherence, compliance with chronic care pathway, and lifestyle adherence.">
 <div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:500; opacity:0.9; margin-bottom:4px;">
-<span>60-Day Risk</span>
+<span>60-Day Risk ℹ️</span>
 <span style="color:{get_color(band_60)};">{prob_60:.1%} ({band_60})</span>
 </div>
 <div style="background:rgba(255,255,255,0.08); border-radius:8px; height:8px; overflow:hidden; border: 1px solid rgba(255,255,255,0.05);">
@@ -556,28 +556,15 @@ if response_data:
 </div>
 
 <!-- 90-Day Risk -->
-<div style="margin-bottom:5px;">
+<div style="margin-bottom:5px; cursor:help;" title="90-Day Risk (Days 61–90): Reflects long-term social barrier impact (SDOH), financial barriers, and primary care access stability.">
 <div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:500; opacity:0.9; margin-bottom:4px;">
-<span>90-Day Risk</span>
+<span>90-Day Risk ℹ️</span>
 <span style="color:{get_color(band_90)};">{prob_90:.1%} ({band_90})</span>
 </div>
 <div style="background:rgba(255,255,255,0.08); border-radius:8px; height:8px; overflow:hidden; border: 1px solid rgba(255,255,255,0.05);">
 <div style="background:{get_color(band_90)}; width:{prob_90:.1%}; height:100%;"></div>
 </div>
 </div>
-</div>
-
-<div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
-<h5 style="margin:0 0 8px 0; font-size:0.95rem; font-weight:600; opacity:0.9;">ℹ️ Timeline Risk Interpretations</h5>
-<p style="margin:0 0 6px 0; font-size:0.85rem; opacity:0.85; line-height:1.4;">
-<b>• 30-Day Risk (Days 1–30)</b>: Reflects immediate post-discharge instability, medication errors, and transition care gaps.
-</p>
-<p style="margin:0 0 6px 0; font-size:0.85rem; opacity:0.85; line-height:1.4;">
-<b>• 60-Day Risk (Days 31–60)</b>: Reflects outpatient follow-up adherence, compliance with chronic care pathway, and lifestyle adherence.
-</p>
-<p style="margin:0 0 10px 0; font-size:0.85rem; opacity:0.85; line-height:1.4;">
-<b>• 90-Day Risk (Days 61–90)</b>: Reflects long-term social barrier impact (SDOH), financial barriers, and primary care access stability.
-</p>
 </div>
 
 <div style="margin-top:15px; padding:12px; background:rgba(255,255,255,0.02); border-radius:6px; border:1px solid rgba(255,255,255,0.05); font-size:0.88rem; line-height:1.5;">
