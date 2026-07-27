@@ -508,24 +508,53 @@ if response_data:
                 prior_encs = len(profile.get("encounters", [])) - 1
                 sdoh_score = profile.get("sdoh_score", 0)
                 
+                # Check actual risk bands
+                is_30_high = band_30 == "High"
+                is_60_high = band_60 == "High"
+                is_90_high = band_90 == "High"
+                
                 comp_reasons = []
-                if prior_encs >= 3:
-                    comp_reasons.append(f"high utilization history ({prior_encs} prior encounters) significantly elevates their Days 1–30 risk relative to standard patient cohorts")
-                elif prior_encs == 0:
-                    comp_reasons.append("lack of prior hospitalizations helps maintain a lower baseline risk during the initial 30 days post-discharge")
-                    
-                if age >= 65:
-                    comp_reasons.append(f"advanced age ({age}) introduces geriatric vulnerabilities (such as cognitive decline or mobility limits) that contribute to a higher baseline 60/90-day risk profile")
+                
+                # 30-Day Risk Context
+                if is_30_high:
+                    if prior_encs >= 3:
+                        comp_reasons.append(f"high utilization history ({prior_encs} prior encounters) directly contributes to their high Days 1–30 risk band ({prob_30:.1%})")
+                    else:
+                        comp_reasons.append(f"clinical complexity from the current acute encounter escalates their short-term Days 1–30 risk to {prob_30:.1%}")
                 else:
-                    comp_reasons.append(f"younger age ({age}) generally provides better physiological reserve, helping moderate longer-term readmission threats")
+                    if prior_encs == 0:
+                        comp_reasons.append(f"lack of prior hospitalizations helps maintain a low baseline risk in the initial 30 days ({prob_30:.1%})")
+                    else:
+                        comp_reasons.append(f"stabilized transition care factors help moderate their initial 30-day readmission risk ({prob_30:.1%})")
                 
-                if ins in ["Medicaid", "Uninsured"]:
-                    comp_reasons.append(f"enrollment status ({ins}) can introduce access-to-care barriers or cost strains that elevate their Days 31–60 and Days 61–90 risks")
+                # 60-Day Risk Context
+                if is_60_high:
+                    if ins in ["Medicaid", "Uninsured"]:
+                        comp_reasons.append(f"access-to-care barriers associated with their enrollment status ({ins}) elevate their mid-term Days 31–60 risk to {prob_60:.1%}")
+                    else:
+                        comp_reasons.append(f"clinical outpatient transition challenges keep their mid-term risk elevated at {prob_60:.1%}")
+                else:
+                    comp_reasons.append(f"outpatient adherence checks help stabilize their Days 31–60 risk at a moderate or low level ({prob_60:.1%})")
                 
-                if sdoh_score >= 3:
-                    comp_reasons.append(f"high social needs burden ({sdoh_score}/6 flags positive) creates severe compliance risks, causing the Days 61–90 risk to remain elevated")
-                elif sdoh_score == 0:
-                    comp_reasons.append("complete absence of social barriers (0/6 flags) heavily suppresses their Days 61–90 risk, ensuring a safer recovery transition")
+                # 90-Day Risk Context
+                if is_90_high:
+                    if sdoh_score >= 3:
+                        comp_reasons.append(f"severe SDOH burden ({sdoh_score}/6 flags positive) creates long-term compliance challenges, causing their Days 61–90 risk to escalate to {prob_90:.1%}")
+                    elif age >= 65:
+                        comp_reasons.append(f"advanced age ({age}) and related chronic needs elevate their long-term 90-day risk profile to {prob_90:.1%}")
+                    else:
+                        comp_reasons.append(f"long-term transition factors result in an elevated 90-day risk ({prob_90:.1%})")
+                else:
+                    reasons_low_90 = []
+                    if age < 65:
+                        reasons_low_90.append(f"younger age ({age}) which generally provides better physiological reserve")
+                    if sdoh_score < 3:
+                        reasons_low_90.append(f"manageable social needs score ({sdoh_score}/6)")
+                    else:
+                        reasons_low_90.append("protective clinical factors which override their social needs")
+                        
+                    desc_low_90 = ", combined with ".join(reasons_low_90)
+                    comp_reasons.append(f"long-term Days 61–90 risk remains low ({prob_90:.1%}) due to {desc_low_90}")
                 
                 comp_text = f"Patient is a {age}-year-old with {ins} coverage. "
                 if comp_reasons:
