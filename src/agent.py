@@ -270,6 +270,7 @@ Patient Profile:
 - Age: {patient_profile['age']} (Sex: {patient_profile['sex']})
 - Insurance: {patient_profile['insurance']}
 - Language: {patient_profile['language']}
+- Total SDOH Score: {patient_profile.get('sdoh_score', 0)}/6 active flags
 - SDOH Flags:
   - Food Insecurity: {patient_profile.get('food_insecurity', 0)}
   - Income Barrier: {patient_profile.get('income_barrier', 0)}
@@ -304,7 +305,7 @@ Mandatory Clinical Instructions:
    - For Diabetes: Enroll in Diabetes self-management education, review glucometer logs & insulin regimen.
    - For Type 1 Diabetes: Enroll in Pediatric Type 1 Diabetes action pathway (glucometer/insulin pump logs, Continuous Glucose Monitor CGM instruction, insulin-carb ratio titration, and school-based care coordination).
    - For Hypertension: Provide Hypertension protocol (daily blood pressure log, sodium limits counseling, DASH diet guidelines, and anti-hypertensive medication review).
-2. In the "risk_drivers" array, you MUST cite explicit details from the patient's clinical encounter history (e.g. specific prior admission diagnoses, high utilization rates, prior ED visits, or prolonged lengths of stay) or demographic/SDOH factors. Do not write generic risk drivers that are not supported by the patient's record.
+2. In the "risk_drivers" array, you MUST cite explicit details from the patient's clinical encounter history (e.g. specific prior admission diagnoses, high utilization rates, prior ED visits, or prolonged lengths of stay) or demographic/SDOH factors. Do not write generic risk drivers that are not supported by the patient's record. If you reference 'Compounded SDOH burden' or mention an 'SDOH Score' as a risk driver, you MUST output the exact score value provided in the profile ({patient_profile.get('sdoh_score', 0)}/6). If the score is 0, do not list social or SDOH burden as a risk driver.
 3. Provide concrete, actionable clinical steps tailored to Care Management Level '{risk_analysis['care_management_level']}'.
 4. If they have SDOH flags, address them with specific resources:
    - Food Insecurity: Medically Tailored Meals (MTM) and food bank coordination.
