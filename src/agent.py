@@ -291,6 +291,7 @@ Mandatory Clinical Instructions:
    - For CHF: Enroll in CHF Care Pathway (daily weight logs, low-sodium diet, outpatient cardiology).
    - For COPD: Confirm inhaler technique demonstration, verify home oxygen supplies.
    - For Diabetes: Enroll in Diabetes self-management education, review glucometer logs & insulin regimen.
+   - For Type 1 Diabetes: Enroll in Pediatric Type 1 Diabetes action pathway (glucometer/insulin pump logs, Continuous Glucose Monitor CGM instruction, insulin-carb ratio titration, and school-based care coordination).
    - For Hypertension: Provide Hypertension protocol (daily blood pressure log, sodium limits counseling, DASH diet guidelines, and anti-hypertensive medication review).
 2. Provide concrete, actionable clinical steps tailored to Care Management Level '{risk_analysis['care_management_level']}'.
 3. If they have SDOH flags, address them with specific resources:
@@ -355,6 +356,8 @@ Mandatory Clinical Instructions:
                 clinical_recs.append("Confirm inhaler technique demonstration completed. Ensure oxygen supplies (if active) are delivered to home.")
             elif active_diag == "Diabetes":
                 clinical_recs.append("Enroll in outpatient Diabetes self-management education. Review glucometer logs and insulin administration regimen.")
+            elif active_diag == "Type 1 Diabetes":
+                clinical_recs.append("Enroll in pediatric Type 1 Diabetes pathway: verify insulin pump/injection supplies, continuous glucose monitor (CGM) instruction, and coordinate school-based medical action plans.")
             elif active_diag == "Asthma":
                 clinical_recs.append("Provide Asthma Action Plan (Green/Yellow/Red zones). Confirm rescue inhaler access, trigger avoidance counseling, and peak flow meter monitoring.")
             elif active_diag == "Hypertension":

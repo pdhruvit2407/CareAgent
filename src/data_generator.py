@@ -39,9 +39,15 @@ def generate_synthetic_data(data_dir="data", num_patients=5000):
     patient_ids = np.arange(1, num_patients + 1)
     
     # Demographics
-    # Skew age older: beta distribution scaled between 18 and 89
-    # a=3, b=2 yields a distribution skewed towards the higher end (mean = 3/(3+2) = 0.6)
-    ages = (18 + 71 * np.random.beta(a=3, b=2, size=num_patients)).astype(int)
+    # Skew ages: 15% pediatric (1-18), 85% adult (19-89)
+    is_pediatric = np.random.choice([True, False], size=num_patients, p=[0.15, 0.85])
+    ages = np.zeros(num_patients, dtype=int)
+    for idx in range(num_patients):
+        if is_pediatric[idx]:
+            ages[idx] = np.random.randint(1, 19)
+        else:
+            ages[idx] = int(19 + 70 * np.random.beta(a=3, b=2))
+            
     sexes = np.random.choice(["M", "F"], size=num_patients, p=[0.48, 0.52])
     languages = np.random.choice(["English", "Spanish", "Other"], size=num_patients, p=[0.80, 0.15, 0.05])
     
@@ -50,6 +56,8 @@ def generate_synthetic_data(data_dir="data", num_patients=5000):
     for age in ages:
         if age >= 65:
             insurances.append(np.random.choice(["Medicare", "Medicaid", "Commercial", "Uninsured"], p=[0.88, 0.07, 0.03, 0.02]))
+        elif age <= 18:
+            insurances.append(np.random.choice(["Medicaid", "Commercial", "Uninsured"], p=[0.70, 0.25, 0.05]))
         else:
             insurances.append(np.random.choice(["Medicare", "Medicaid", "Commercial", "Uninsured"], p=[0.05, 0.30, 0.50, 0.15]))
             
@@ -127,16 +135,19 @@ def generate_synthetic_data(data_dir="data", num_patients=5000):
             discharge_day = admit_day + los
             
             enc_type = np.random.choice(["Inpatient", "ED"], p=[0.60, 0.40])
-            diag = np.random.choice(diag_groups, p=diag_probs)
+            if p_age <= 18:
+                diag = np.random.choice(["Asthma", "Type 1 Diabetes"], p=[0.65, 0.35])
+            else:
+                diag = np.random.choice(diag_groups, p=diag_probs)
             
             # Readmission probability formula
             # Base risk: 5%
-            # Chronic diagnosis: CHF/COPD/Diabetes/Asthma/Hypertension (+12%)
+            # Chronic diagnosis: CHF/COPD/Diabetes/Asthma/Hypertension/Type 1 Diabetes (+12%)
             # SDOH score: +4% per flag (up to 24% for 6 flags)
             # Prior encounter count: +5% per prior encounter (capped influence)
             # Inpatient encounter has slightly higher risk of readmission: +3%
             p_readmit = 0.05
-            if diag in ["CHF", "COPD", "Diabetes", "Asthma", "Hypertension"]:
+            if diag in ["CHF", "COPD", "Diabetes", "Asthma", "Hypertension", "Type 1 Diabetes"]:
                 p_readmit += 0.12
             p_readmit += sdoh_score * 0.04
             p_readmit += min(prior_encounters * 0.05, 0.25)

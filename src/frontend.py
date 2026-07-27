@@ -253,6 +253,8 @@ if "filter_sdoh" not in st.session_state:
     st.session_state.filter_sdoh = "All"
 if "filter_diag" not in st.session_state:
     st.session_state.filter_diag = "All"
+if "filter_age_category" not in st.session_state:
+    st.session_state.filter_age_category = "All"
 if "filter_search" not in st.session_state:
     st.session_state.filter_search = ""
 if "filter_monitored" not in st.session_state:
@@ -261,7 +263,8 @@ if "filter_monitored" not in st.session_state:
 risk_filter = st.sidebar.selectbox("Readmission Risk Band", ["All", "High", "Medium", "Low"], key="filter_risk")
 care_filter = st.sidebar.selectbox("Care Management Level", ["All", "Intensive", "Enhanced", "Routine"], key="filter_care")
 sdoh_filter = st.sidebar.selectbox("SDOH Risk Level", ["All", "High", "Moderate", "Low"], key="filter_sdoh")
-diag_filter = st.sidebar.selectbox("Diagnosis Cohort", ["All", "CHF", "COPD", "Diabetes", "Asthma", "Hypertension"], key="filter_diag")
+diag_filter = st.sidebar.selectbox("Diagnosis Cohort", ["All", "CHF", "COPD", "Diabetes", "Asthma", "Hypertension", "Type 1 Diabetes"], key="filter_diag")
+age_cat_filter = st.sidebar.selectbox("Age Category", ["All", "Pediatric (<= 18)", "Adult (> 18)"], key="filter_age_category")
 search_id = st.sidebar.text_input("Search Patient ID", key="filter_search")
 monitored_filter = st.sidebar.checkbox("⭐ Monitored Patients Only", key="filter_monitored")
 
@@ -270,6 +273,7 @@ def reset_filters():
     st.session_state.filter_care = "All"
     st.session_state.filter_sdoh = "All"
     st.session_state.filter_diag = "All"
+    st.session_state.filter_age_category = "All"
     st.session_state.filter_search = ""
     st.session_state.filter_monitored = False
 
@@ -285,6 +289,10 @@ if sdoh_filter != "All":
     params["sdoh_risk"] = sdoh_filter
 if diag_filter != "All":
     params["diagnosis"] = diag_filter
+if age_cat_filter == "Pediatric (<= 18)":
+    params["age_category"] = "pediatric"
+elif age_cat_filter == "Adult (> 18)":
+    params["age_category"] = "adult"
 if search_id.strip():
     params["search"] = search_id.strip()
 if monitored_filter:

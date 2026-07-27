@@ -102,6 +102,7 @@ def get_patients(
     care_level: Optional[str] = Query(None, description="Filter by care level (Routine, Enhanced, Intensive)"),
     sdoh_risk: Optional[str] = Query(None, description="Filter by SDOH risk level (Low, Moderate, High)"),
     diagnosis: Optional[str] = Query(None, description="Filter by latest diagnosis group"),
+    age_category: Optional[str] = Query(None, description="Filter by age category (pediatric, adult)"),
     search: Optional[str] = Query(None, description="Search by Patient ID"),
     monitored: Optional[bool] = Query(None, description="Filter by monitored status"),
     limit: int = 100,
@@ -173,6 +174,10 @@ def get_patients(
             if sdoh_risk and row["sdoh_risk_level"] != sdoh_risk:
                 continue
             if diagnosis and row["diagnosis_group"] != diagnosis:
+                continue
+            if age_category == "pediatric" and row["age"] > 18:
+                continue
+            if age_category == "adult" and row["age"] <= 18:
                 continue
             if search and str(p_id) != search.strip():
                 continue
