@@ -244,6 +244,15 @@ class RecommendationTool:
         if current_diag not in history_diags:
             history_diags.append(current_diag)
             
+        # Construct chronological prior encounters list
+        prior_encs = patient_profile.get('encounters', [])[:-1]
+        prior_encs_text = ""
+        if prior_encs:
+            for idx, e in enumerate(prior_encs):
+                prior_encs_text += f"  * Prior Encounter {idx+1}: {e.get('encounter_type')} for {e.get('diagnosis_group')} (Length of Stay: {e.get('length_of_stay')} days, Admit Day: {e.get('admit_day')})\n"
+        else:
+            prior_encs_text = "  * No prior encounters in the past 12 months.\n"
+            
         return f"""
 You are CareAgent, an AI clinical coordinator. Your job is to generate highly personalized post-discharge recommendations and explain risk drivers for a patient.
 You must output a raw JSON object and nothing else. No markdown blocks, no leading/trailing conversational text.
@@ -272,9 +281,11 @@ Patient Profile:
 Encounter History:
 - Diagnosis Group (Current): {current_diag}
 - All Historical Diagnoses: {', '.join(history_diags)}
-- Length of Stay: {patient_profile['encounters'][-1]['length_of_stay']} days
-- Encounter Type: {patient_profile['encounters'][-1]['encounter_type']}
-- Total Prior Encounters: {len(patient_profile['encounters']) - 1}
+- Length of Stay (Current): {patient_profile['encounters'][-1]['length_of_stay']} days
+- Encounter Type (Current): {patient_profile['encounters'][-1]['encounter_type']}
+- Chronological Prior Encounters:
+{prior_encs_text}
+- Total Prior Encounters: {len(prior_encs)}
 
 Risk Assessment:
 - Predicted 30-Day Readmission Risk: {risk_analysis['readmit_probability']:.2%} (Band: {risk_analysis['readmit_risk_band']})
@@ -293,8 +304,9 @@ Mandatory Clinical Instructions:
    - For Diabetes: Enroll in Diabetes self-management education, review glucometer logs & insulin regimen.
    - For Type 1 Diabetes: Enroll in Pediatric Type 1 Diabetes action pathway (glucometer/insulin pump logs, Continuous Glucose Monitor CGM instruction, insulin-carb ratio titration, and school-based care coordination).
    - For Hypertension: Provide Hypertension protocol (daily blood pressure log, sodium limits counseling, DASH diet guidelines, and anti-hypertensive medication review).
-2. Provide concrete, actionable clinical steps tailored to Care Management Level '{risk_analysis['care_management_level']}'.
-3. If they have SDOH flags, address them with specific resources:
+2. In the "risk_drivers" array, you MUST cite explicit details from the patient's clinical encounter history (e.g. specific prior admission diagnoses, high utilization rates, prior ED visits, or prolonged lengths of stay) or demographic/SDOH factors. Do not write generic risk drivers that are not supported by the patient's record.
+3. Provide concrete, actionable clinical steps tailored to Care Management Level '{risk_analysis['care_management_level']}'.
+4. If they have SDOH flags, address them with specific resources:
    - Food Insecurity: Medically Tailored Meals (MTM) and food bank coordination.
    - Income Barrier: Case Management financial counseling, co-pay assistance programs, and utility subsidy programs.
    - Housing Instability: Medical-Legal Partnership & housing navigation services.
@@ -325,9 +337,20 @@ Mandatory Clinical Instructions:
         if los > 5:
             drivers.append(f"Prolonged length of stay ({los} days) indicating clinical complexity")
             
-        enc_count = len(patient_profile.get("encounters", [])) - 1
-        if enc_count > 1:
-            drivers.append(f"High utilization history ({enc_count} prior encounters in 12 months)")
+        # Detailed prior clinical utilization history drivers
+        prior_encs = patient_profile.get("encounters", [])[:-1]
+        prior_ed = sum(1 for e in prior_encs if e.get("encounter_type") == "ED")
+        prior_ip = sum(1 for e in prior_encs if e.get("encounter_type") == "Inpatient")
+        has_prior_long_stay = any(e.get("length_of_stay", 0) > 5 for e in prior_encs)
+        
+        if prior_ed >= 2:
+            drivers.append(f"Frequent emergency department utilization ({prior_ed} prior ED visits)")
+        if prior_ip >= 2:
+            drivers.append(f"Frequent inpatient admissions ({prior_ip} prior inpatient admissions)")
+        if has_prior_long_stay:
+            drivers.append("History of complex, prolonged hospitalizations (>5 days stay)")
+        elif len(prior_encs) == 1:
+            drivers.append("Single prior hospitalization in the past 12 months")
             
         # Demographics and SDOH drivers
         sdoh_score = patient_profile.get("sdoh_score", 0)
