@@ -136,18 +136,18 @@ def generate_synthetic_data(data_dir="data", num_patients=5000):
             
             enc_type = np.random.choice(["Inpatient", "ED"], p=[0.60, 0.40])
             if p_age <= 18:
-                diag = np.random.choice(["Asthma", "Type 1 Diabetes"], p=[0.65, 0.35])
+                diag = np.random.choice(["Asthma", "Diabetes"], p=[0.65, 0.35])
             else:
                 diag = np.random.choice(diag_groups, p=diag_probs)
             
             # Readmission probability formula
             # Base risk: 5%
-            # Chronic diagnosis: CHF/COPD/Diabetes/Asthma/Hypertension/Type 1 Diabetes (+12%)
+            # Chronic diagnosis: CHF/COPD/Diabetes/Asthma/Hypertension (+12%)
             # SDOH score: +4% per flag (up to 24% for 6 flags)
             # Prior encounter count: +5% per prior encounter (capped influence)
             # Inpatient encounter has slightly higher risk of readmission: +3%
             p_readmit = 0.05
-            if diag in ["CHF", "COPD", "Diabetes", "Asthma", "Hypertension", "Type 1 Diabetes"]:
+            if diag in ["CHF", "COPD", "Diabetes", "Asthma", "Hypertension"]:
                 p_readmit += 0.12
             p_readmit += sdoh_score * 0.04
             p_readmit += min(prior_encounters * 0.05, 0.25)

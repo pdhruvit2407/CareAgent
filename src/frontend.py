@@ -263,7 +263,7 @@ if "filter_monitored" not in st.session_state:
 risk_filter = st.sidebar.selectbox("Readmission Risk Band", ["All", "High", "Medium", "Low"], key="filter_risk")
 care_filter = st.sidebar.selectbox("Care Management Level", ["All", "Intensive", "Enhanced", "Routine"], key="filter_care")
 sdoh_filter = st.sidebar.selectbox("SDOH Risk Level", ["All", "High", "Moderate", "Low"], key="filter_sdoh")
-diag_filter = st.sidebar.selectbox("Diagnosis Cohort", ["All", "CHF", "COPD", "Diabetes", "Asthma", "Hypertension", "Type 1 Diabetes"], key="filter_diag")
+diag_filter = st.sidebar.selectbox("Diagnosis Cohort", ["All", "CHF", "COPD", "Diabetes", "Asthma", "Hypertension"], key="filter_diag")
 age_cat_filter = st.sidebar.selectbox("Age Category", ["All", "Pediatric (<= 18)", "Adult (> 18)"], key="filter_age_category")
 search_id = st.sidebar.text_input("Search Patient ID", key="filter_search")
 monitored_filter = st.sidebar.checkbox("⭐ Monitored Patients Only", key="filter_monitored")
