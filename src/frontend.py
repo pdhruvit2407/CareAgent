@@ -344,10 +344,35 @@ if response_data:
     st.sidebar.markdown(f"**Found {total_found} matching patients.**")
     
     if patients:
-        # Patient selector list
-        patient_options = {f"Patient {p['patient_id']} (Risk: {p['readmit_risk_band']}, Care: {p['care_management_level']})": p['patient_id'] for p in patients}
-        selected_option = st.sidebar.selectbox("Select Patient to Inspect", list(patient_options.keys()))
-        selected_patient_id = patient_options[selected_option]
+        # Get stable lists of IDs and labels
+        patient_ids = [p['patient_id'] for p in patients]
+        patient_labels = [f"Patient {p['patient_id']} (Risk: {p['readmit_risk_band']}, Care: {p['care_management_level']})" for p in patients]
+        
+        # Ensure session state has selected_patient_id
+        if "selected_patient_id" not in st.session_state:
+            st.session_state.selected_patient_id = patient_ids[0] if patient_ids else None
+            
+        # If the currently selected patient is not in the filtered list, reset it to the first available patient
+        if st.session_state.selected_patient_id not in patient_ids and patient_ids:
+            st.session_state.selected_patient_id = patient_ids[0]
+            
+        # Find index of current selected patient in the list
+        default_idx = 0
+        if st.session_state.selected_patient_id in patient_ids:
+            default_idx = patient_ids.index(st.session_state.selected_patient_id)
+            
+        # Render the selectbox with an explicit key and default index
+        selected_label = st.sidebar.selectbox(
+            "Select Patient to Inspect",
+            options=patient_labels,
+            index=default_idx,
+            key="selectbox_patient_selector"
+        )
+        
+        # Map the selected label back to the patient ID and store in session state
+        selected_patient_idx = patient_labels.index(selected_label)
+        selected_patient_id = patient_ids[selected_patient_idx]
+        st.session_state.selected_patient_id = selected_patient_id
         
         # --- PATIENT DETAIL VIEW ---
         detail = fetch_patient_detail(selected_patient_id)
