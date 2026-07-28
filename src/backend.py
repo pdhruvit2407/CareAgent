@@ -272,6 +272,27 @@ def update_checklist_item(patient_id: int, request: ChecklistUpdateRequest):
     return {"status": "success"}
 
 
+@app.get("/patients/{patient_id}/explanations")
+def get_patient_explanations(patient_id: int):
+    # Fetch encounter and patient profile
+    profile = orchestrator.data_tool.get_patient_profile(patient_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Patient profile not found")
+        
+    encs = profile.get("encounters", [])
+    if not encs:
+        raise HTTPException(status_code=400, detail="No encounters found for patient")
+        
+    latest_enc = encs[-1]
+    
+    # Calculate explanations on the fly
+    try:
+        explanations = orchestrator.risk_tool.explain_prediction(profile, latest_enc)
+        return {"status": "success", "local_contributions": explanations}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/chat", response_model=ChatResponse)
 def chat_with_careagent(request: ChatRequest):
     patient_id = request.patient_id
