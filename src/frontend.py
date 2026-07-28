@@ -502,6 +502,67 @@ if response_data:
                 else:
                     drivers_html = "<p style='font-size:0.9rem; opacity:0.7; margin:0;'>No clinical risk drivers extracted yet. Click the discharge simulator to evaluate.</p>"
                 
+                # Construct Local Feature Contributions HTML block
+                FEAT_MAP = {
+                    "age": "Age",
+                    "sex": "Sex",
+                    "insurance": "Insurance Type",
+                    "language": "Preferred Language",
+                    "food_insecurity": "Food Insecurity",
+                    "income_barrier": "Income Barrier",
+                    "housing_instability": "Housing Instability",
+                    "education_literacy_barrier": "Education / Literacy Barrier",
+                    "low_social_support": "Low Social Support",
+                    "transportation_barrier": "Transportation Barrier",
+                    "sdoh_score": "Total SDOH Count",
+                    "sdoh_risk_level": "SDOH Risk Level",
+                    "length_of_stay": "Length of Stay",
+                    "encounter_type": "Encounter Type",
+                    "diagnosis_group": "Diagnosis Group",
+                    "prior_encounters": "Prior Encounters (12m)",
+                    "prior_ed": "Prior ED Visits (12m)",
+                    "prior_inpatient": "Prior Inpatient Stays (12m)"
+                }
+                
+                contrib_html = ""
+                local_contribs = risk_results.get("local_contributions", {}).get("30_day", {})
+                if local_contribs:
+                    sorted_contribs = sorted([(k, v) for k, v in local_contribs.items() if abs(v) >= 0.005], key=lambda x: abs(x[1]), reverse=True)[:5]
+                    if sorted_contribs:
+                        max_abs = max(abs(v) for _, v in sorted_contribs)
+                        if max_abs == 0: max_abs = 1.0
+                        
+                        contrib_rows = ""
+                        for feat, val in sorted_contribs:
+                            label = FEAT_MAP.get(feat, feat)
+                            pct_val = val * 100
+                            pct_text = f"+{pct_val:.1f}%" if val > 0 else f"{pct_val:.1f}%"
+                            color = "#ff4b4b" if val > 0 else "#00e676"
+                            bar_color = "linear-gradient(90deg, #ff4b4b, #ff7676)" if val > 0 else "linear-gradient(90deg, #00e676, #66ffa6)"
+                            bar_width = (abs(val) / max_abs) * 100
+                            
+                            contrib_rows += f"""
+                            <div style="margin-bottom:10px;">
+                                <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:2px;">
+                                    <span>{label}</span>
+                                    <span style="font-weight:600; color:{color};">{pct_text}</span>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.04); border-radius:4px; height:8px; width:100%; border: 1px solid rgba(255,255,255,0.02);">
+                                    <div style="background:{bar_color}; width:{bar_width:.1f}%; height:100%; border-radius:4px;"></div>
+                                </div>
+                            </div>
+                            """
+                            
+                        contrib_html = f"""
+                        <div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
+                            <h4 style="margin:0 0 10px 0;">👤 Machine Learning Feature Contributions</h4>
+                            <p style="font-size:0.78rem; opacity:0.7; margin-bottom:12px; line-height:1.4;">
+                                Mathematical contributions of patient-specific attributes to the 30-Day Risk prediction. Red indicates factors increasing risk; Green indicates protective factors.
+                            </p>
+                            {contrib_rows}
+                        </div>
+                        """
+                
                 # Generate demographic/historical baseline comparison context
                 age = profile.get("age", 50)
                 ins = profile.get("insurance", "Medicare")
@@ -619,6 +680,7 @@ if response_data:
 <p style="margin-top:20px; font-style:italic; font-size:0.95rem; line-height:1.5; opacity:0.85; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
 <b>Clinical Rationale:</b> {recommendations.get('clinical_rationale', 'No rationale provided.')}
 </p>
+{contrib_html}
 </div>"""
                 st.markdown(timeline_card_html, unsafe_allow_html=True)
                 

@@ -200,6 +200,69 @@ class RiskModelTool:
             "care_management_level": care_level
         }
 
+    def explain_prediction(self, patient_profile, encounter):
+        if self.model is None:
+            return {}
+            
+        # Prepare feature vector (same logic as in predict_risk)
+        row_dict = {}
+        for col in ["age", "sex", "insurance", "language", "food_insecurity", "income_barrier", 
+                    "housing_instability", "education_literacy_barrier", "low_social_support", 
+                    "transportation_barrier", "sdoh_score", "sdoh_risk_level"]:
+            row_dict[col] = patient_profile.get(col)
+            
+        row_dict["length_of_stay"] = encounter.get("length_of_stay")
+        row_dict["encounter_type"] = encounter.get("encounter_type")
+        row_dict["diagnosis_group"] = encounter.get("diagnosis_group")
+        
+        encs = patient_profile.get("encounters", [])
+        current_admit = encounter.get("admit_day")
+        prior_encs = [e for e in encs if e["admit_day"] < current_admit]
+        row_dict["prior_encounters"] = len(prior_encs)
+        row_dict["prior_ed"] = sum(1 for e in prior_encs if e["encounter_type"] == "ED")
+        row_dict["prior_inpatient"] = sum(1 for e in prior_encs if e["encounter_type"] == "Inpatient")
+        
+        input_df = pd.DataFrame([row_dict])
+        for col in self.categorical_cols:
+            le = self.encoders[col]
+            val = str(input_df[col].iloc[0])
+            if val in le.classes_:
+                input_df[col] = le.transform([val])[0]
+            else:
+                input_df[col] = 0
+                
+        input_features = input_df[self.feature_cols]
+        X = input_features.values[0]
+        
+        def trace_tree_contributions(model):
+            contribs = np.zeros(len(self.feature_cols))
+            for tree in model.estimators_:
+                t = tree.tree_
+                node = 0
+                def get_prob(n_idx):
+                    val = t.value[n_idx][0]
+                    return val[1] / val.sum()
+                prev_prob = get_prob(0)
+                while t.children_left[node] != -1:
+                    feat = t.feature[node]
+                    th = t.threshold[node]
+                    if X[feat] <= th:
+                        next_node = t.children_left[node]
+                    else:
+                        next_node = t.children_right[node]
+                    curr_prob = get_prob(next_node)
+                    contribs[feat] += (curr_prob - prev_prob)
+                    prev_prob = curr_prob
+                    node = next_node
+            contribs /= len(model.estimators_)
+            return dict(zip(self.feature_cols, contribs.tolist()))
+            
+        return {
+            "30_day": trace_tree_contributions(self.model_30),
+            "60_day": trace_tree_contributions(self.model_60) if self.model_60 else {},
+            "90_day": trace_tree_contributions(self.model_90) if self.model_90 else {}
+        }
+
 
 class RecommendationTool:
     def __init__(self):
@@ -664,6 +727,7 @@ class CareAgentOrchestrator:
             
         # 4. Predict risk
         risk_results = self.risk_tool.predict_risk(profile, enc)
+        risk_results["local_contributions"] = self.risk_tool.explain_prediction(profile, enc)
         
         # 5. Generate recommendations
         if bypass_gemini:
