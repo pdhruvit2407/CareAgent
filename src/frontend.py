@@ -680,9 +680,86 @@ if response_data:
 <p style="margin-top:20px; font-style:italic; font-size:0.95rem; line-height:1.5; opacity:0.85; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
 <b>Clinical Rationale:</b> {recommendations.get('clinical_rationale', 'No rationale provided.')}
 </p>
-{contrib_html}
 </div>"""
                 st.markdown(timeline_card_html, unsafe_allow_html=True)
+                
+                # Standalone Interactive ML Feature Contributions Card
+                local_contribs_all = risk_results.get("local_contributions", {})
+                if local_contribs_all:
+                    st.markdown("""
+                    <div class="glass-card" style="margin-top:-10px; margin-bottom:20px;">
+                        <h4 style="margin:0 0 10px 0;">👤 Machine Learning Feature Contributions</h4>
+                        <p style="font-size:0.82rem; opacity:0.75; line-height:1.4; margin-bottom:15px;">
+                            Select a risk prediction horizon below to inspect the mathematical contributions of patient-specific attributes to the Random Forest model's prediction. Red indicates factors increasing risk; Green indicates protective factors.
+                        </p>
+                    """, unsafe_allow_html=True)
+                    
+                    # Horizon selector widget
+                    horizon_opt = st.radio(
+                        "Select Risk Horizon to Explain",
+                        ["30-Day Risk", "60-Day Risk", "90-Day Risk"],
+                        horizontal=True,
+                        key=f"explain_horizon_{selected_patient_id}"
+                    )
+                    
+                    horizon_key = "30_day" if horizon_opt == "30-Day Risk" else ("60_day" if horizon_opt == "60-Day Risk" else "90_day")
+                    local_contribs = local_contribs_all.get(horizon_key, {})
+                    
+                    if local_contribs:
+                        # Define feature map here
+                        FEAT_MAP = {
+                            "age": "Age",
+                            "sex": "Sex",
+                            "insurance": "Insurance Type",
+                            "language": "Preferred Language",
+                            "food_insecurity": "Food Insecurity",
+                            "income_barrier": "Income Barrier",
+                            "housing_instability": "Housing Instability",
+                            "education_literacy_barrier": "Education / Literacy Barrier",
+                            "low_social_support": "Low Social Support",
+                            "transportation_barrier": "Transportation Barrier",
+                            "sdoh_score": "Total SDOH Count",
+                            "sdoh_risk_level": "SDOH Risk Level",
+                            "length_of_stay": "Length of Stay",
+                            "encounter_type": "Encounter Type",
+                            "diagnosis_group": "Diagnosis Group",
+                            "prior_encounters": "Prior Encounters (12m)",
+                            "prior_ed": "Prior ED Visits (12m)",
+                            "prior_inpatient": "Prior Inpatient Stays (12m)"
+                        }
+                        
+                        sorted_contribs = sorted([(k, v) for k, v in local_contribs.items() if abs(v) >= 0.005], key=lambda x: abs(x[1]), reverse=True)[:5]
+                        if sorted_contribs:
+                            max_abs = max(abs(v) for _, v in sorted_contribs)
+                            if max_abs == 0: max_abs = 1.0
+                            
+                            contrib_rows = ""
+                            for feat, val in sorted_contribs:
+                                label = FEAT_MAP.get(feat, feat)
+                                pct_val = val * 100
+                                pct_text = f"+{pct_val:.1f}%" if val > 0 else f"{pct_val:.1f}%"
+                                color = "#ff4b4b" if val > 0 else "#00e676"
+                                bar_color = "linear-gradient(90deg, #ff4b4b, #ff7676)" if val > 0 else "linear-gradient(90deg, #00e676, #66ffa6)"
+                                bar_width = (abs(val) / max_abs) * 100
+                                
+                                contrib_rows += f"""
+                                <div style="margin-bottom:10px;">
+                                    <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:2px;">
+                                        <span>{label}</span>
+                                        <span style="font-weight:600; color:{color};">{pct_text}</span>
+                                    </div>
+                                    <div style="background:rgba(255,255,255,0.04); border-radius:4px; height:8px; width:100%; border: 1px solid rgba(255,255,255,0.02);">
+                                        <div style="background:{bar_color}; width:{bar_width:.1f}%; height:100%; border-radius:4px;"></div>
+                                    </div>
+                                </div>
+                                """
+                            st.markdown(contrib_rows, unsafe_allow_html=True)
+                        else:
+                            st.markdown("<p style='font-size:0.85rem; opacity:0.75;'>No significant feature contributions found for this horizon.</p>", unsafe_allow_html=True)
+                    else:
+                        st.markdown("<p style='font-size:0.85rem; opacity:0.75;'>No explanations computed for this horizon.</p>", unsafe_allow_html=True)
+                    
+                    st.markdown("</div>", unsafe_allow_html=True)
                 
                 # Recommendations Checklists
                 st.markdown("<h3 style='margin-top:1.5rem;'>📝 Actionable Recommendations</h3>", unsafe_allow_html=True)
