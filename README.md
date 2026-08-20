@@ -90,3 +90,60 @@ export BACKEND_URL="http://localhost:8000"
 streamlit run src/frontend.py
 ```
 Open [http://localhost:8501](http://localhost:8501) in your browser.
+
+---
+
+## 6. Risk Timeline Logic & Probability Calculations
+
+CareAgent simulates and predicts patient readmission risks using clinical, historical utilization, and social determinant factors. Below is the detailed mathematical framework and a concrete example mapping Patient ID 105.
+
+### 6.1 Base Readmission Probability ($P_{\text{Base}}$)
+First, a baseline readmission risk ($P_{\text{Base}}$) is calculated for each encounter:
+
+$$P_{\text{Base}} = 0.05 + \Delta_{\text{Chronic}} + \Delta_{\text{SDOH}} + \Delta_{\text{History}} + \Delta_{\text{Type}}$$
+
+Where:
+* **Baseline Risk**: $0.05$ (5% starting risk for any hospitalization)
+* **$\Delta_{\text{Chronic}}$ (Chronic Disease Adjustment)**: $+0.12$ if primary diagnosis is CHF, COPD, Diabetes, Asthma, or Hypertension. Otherwise $+0.00$.
+* **$\Delta_{\text{SDOH}}$ (Social Barriers Influence)**: $+0.04 \times (\text{SDOH Score})$ (Adds up to $+0.24$ if all 6 screening flags are positive).
+* **$\Delta_{\text{History}}$ (Utilization History)**: $+0.05 \times (\text{Prior Encounters})$ (Capped at a maximum influence of $+0.25$).
+* **$\Delta_{\text{Type}}$ (Encounter Severity)**: $+0.03$ if the encounter type is `"Inpatient"`. Otherwise $+0.00$.
+
+### 6.2 Independent Disjoint Risk Windows
+Because the three risk timelines represent independent, disjoint 30-day windows (Days 1–30, Days 31–60, and Days 61–90), the probabilities are scaled down over time to reflect post-acute stabilization:
+
+* **30-Day Risk (Days 1–30)**:
+  $$P_{30} = \text{clip}(P_{\text{Base}}, 0.02, 0.85)$$
+* **60-Day Risk (Days 31–60)**:
+  $$P_{60} = \text{clip}(P_{\text{Base}} \times 0.5, 0.01, 0.40)$$
+* **90-Day Risk (Days 61–90)**:
+  $$P_{90} = \text{clip}(P_{\text{Base}} \times 0.3, 0.01, 0.25)$$
+
+*Note: In the synthetic database generator, outcomes (`readmit_30`, `readmit_60`, `readmit_90`) are sampled via a Bernoulli trial ($0$ or $1$) using these probabilities.*
+
+---
+
+### 6.3 Concrete Calculation Example (Patient ID 105)
+
+#### Patient Profile Details:
+* **Patient ID**: 105
+* **Demographics**: 74-year-old female
+* **Encounter Diagnosis**: CHF (Congestive Heart Failure)
+* **Encounter Type**: Inpatient
+* **Prior encounters (past 12 months)**: 2
+* **Positive SDOH Flags**: 3 (Food Insecurity, Income Strain, Transportation Barrier)
+
+#### Step-by-Step Calculation:
+1. **$P_{\text{Base}}$ Calculation**:
+   * Base: $0.05$
+   * $\Delta_{\text{Chronic}}$ (CHF): $+0.12$
+   * $\Delta_{\text{SDOH}}$ (3 flags): $3 \times 0.04 = +0.12$
+   * $\Delta_{\text{History}}$ (2 prior): $2 \times 0.05 = +0.10$
+   * $\Delta_{\text{Type}}$ (Inpatient): $+0.03$
+   * **Total $P_{\text{Base}}$**: $0.05 + 0.12 + 0.12 + 0.10 + 0.03 = \mathbf{0.42}$ (42%)
+
+2. **Window Risks & Threshold Categorization**:
+   * **30-Day Risk**: $\text{clip}(0.42, 0.02, 0.85) = \mathbf{42.0\%}$ $\rightarrow$ **High Risk** (since $\ge 35\%$)
+   * **60-Day Risk**: $\text{clip}(0.42 \times 0.5, 0.01, 0.40) = \mathbf{21.0\%}$ $\rightarrow$ **Medium Risk** (since $\ge 15\%$ and $< 35\%$)
+   * **90-Day Risk**: $\text{clip}(0.42 \times 0.3, 0.01, 0.25) = \mathbf{12.6\%}$ $\rightarrow$ **Low Risk** (since $< 15\%$)
+
